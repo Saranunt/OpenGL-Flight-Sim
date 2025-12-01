@@ -79,6 +79,7 @@ namespace plane::app
         features::multiplayer::MultiplayerManager multiplayerManager_;
 
         glm::vec3 lightDirection_ { -0.3f, -1.0f, -0.3f };
+        bool fireHeldLastFrame_ { false };
     };
 }
 

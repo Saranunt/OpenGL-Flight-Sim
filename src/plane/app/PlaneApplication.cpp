@@ -41,6 +41,15 @@ namespace plane::app
             timingState_.lastFrame = currentFrame;
 
             inputHandler_.ProcessInput(window_, planeState_, timingState_);
+
+            // Fire a bullet when the player taps the spacebar.
+            int spaceState = glfwGetKey(window_, GLFW_KEY_SPACE);
+            bool firePressedThisFrame = (spaceState == GLFW_PRESS); // && !fireHeldLastFrame_;
+            if (firePressedThisFrame)
+            {
+                shootingSystem_.FireBullet(planeState_);
+            }
+            fireHeldLastFrame_ = (spaceState == GLFW_PRESS);
             planeController_.UpdateFlightDynamics(planeState_, timingState_.deltaTime);
             cameraController_.Update(planeState_, cameraRig_);
 
@@ -110,7 +119,7 @@ namespace plane::app
         islandModel_ = std::make_unique<Model>(FileSystem::getPath("resources/objects/island4/Untitled.dae"));
 
         islandManager_.GenerateIslands();
-        groundPlane_.Initialize(FileSystem::getPath("resources/textures/wave.png"));
+        groundPlane_.Initialize(FileSystem::getPath("resources/textures/wave2.jpg"));
         if (!shadowMap_.Initialize(2048, 2048))
         {
             std::cout << "Failed to initialize shadow map resources." << std::endl;
@@ -208,6 +217,9 @@ namespace plane::app
         glBindTexture(GL_TEXTURE_2D, shadowMap_.GetDepthMap());
 
         RenderSceneGeometry(*shader_, true);
+
+        // Draw bullets after the main geometry so they appear on top.
+        shootingSystem_.Render(*shader_);
 
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, 0);
