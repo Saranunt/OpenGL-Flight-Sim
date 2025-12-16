@@ -31,7 +31,8 @@ namespace plane::features::shooting
         void Initialize();
 
         // Advance all active bullets and prune expired ones.
-        void Update(float deltaTime);
+        // Now also checks for bullet-plane collisions and applies damage.
+        void Update(float deltaTime, core::PlaneState& planeState);
 
         // Spawn a new bullet travelling along the aircraft's forward vector.
         void FireBullet(const core::PlaneState& planeState);
@@ -42,6 +43,9 @@ namespace plane::features::shooting
 
     private:
         void InitializeGeometry();
+        
+        // Check if a bullet collides with the plane (sphere-sphere collision)
+        bool CheckBulletPlaneCollision(const Bullet& bullet, const core::PlaneState& planeState) const;
 
         std::vector<Bullet> bullets_;
         unsigned int bulletVao_ { 0 };

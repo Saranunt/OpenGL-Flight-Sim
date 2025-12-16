@@ -72,6 +72,7 @@ namespace plane::app
     {
         groundPlane_.Shutdown();
         terrainPlane_.Shutdown();
+        healthBarRenderer_.Shutdown();
         shadowMap_.Shutdown();
         glfwTerminate();
     }
@@ -140,6 +141,7 @@ namespace plane::app
         skeletalAnimationSystem_.Initialize();
         movementSystem_.Initialize();
         multiplayerManager_.Initialize();
+        healthBarRenderer_.Initialize();
         collisionSystem_.Initialize(islandManager_, &terrainPlane_);
     }
 
@@ -206,7 +208,8 @@ namespace plane::app
         glDisable(GL_SCISSOR_TEST);
 
         // Feature placeholders still receive deltaTime so they remain pluggable.
-        shootingSystem_.Update(timingState_.deltaTime);
+        shootingSystem_.Update(timingState_.deltaTime, players_[0].state);
+        shootingSystem_.Update(timingState_.deltaTime, players_[1].state);
         skeletalAnimationSystem_.Update(timingState_.deltaTime);
         movementSystem_.Update(timingState_.deltaTime);
         multiplayerManager_.Update(timingState_.deltaTime);
@@ -274,6 +277,9 @@ namespace plane::app
 
         // Draw bullets after the main geometry so they appear on top.
         shootingSystem_.Render(*shader_);
+        
+        // Draw health bar above the plane
+        // healthBarRenderer_.RenderHealthBar( player.state , player.cameraRig, projection, view, *shader_);
 
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, 0);
@@ -285,7 +291,8 @@ namespace plane::app
         groundPlane_.Draw(shader, bindTextures);
         terrainPlane_.Draw(shader, bindTextures);  // Use heightmap terrain instead of island models
         for (const auto& player : players_)
-        {
+        {   
+            if (player.state.isAlive)
             planeRenderer_.Draw(*planeModel_, shader, player.state);
         }
     }

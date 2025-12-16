@@ -12,6 +12,8 @@ namespace plane::core
         float yaw { 0.0f };
         float roll { 0.0f };
         float speed { 5.0f };
+        float health { 100.0f };  // Health points (0-100)
+        bool isAlive { true };     // Whether plane is still active
     };
 }
 
