@@ -680,7 +680,7 @@ void HidDevice::HidDeviceReaderThread::run()
                                                0                                               // pointer of thread identifier
                                              );
 
-            if( (this->threadHandle == INVALID_HANDLE_VALUE) and this->device->deviceErrorCallback )
+            if( (this->threadHandle == INVALID_HANDLE_VALUE) && this->device->deviceErrorCallback )
             {
                 (*(this->device->deviceErrorCallback))(*(this->device),HidError(HidError::DEVICE_READER_THREAD_CREATE));
             }
@@ -694,7 +694,7 @@ void HidDevice::HidDeviceReaderThread::run()
                                       (void*)(this)
                                     );
 
-            if( (res != 0) and this->device->deviceErrorCallback )
+            if( (res != 0) && this->device->deviceErrorCallback )
             {
                 (*(this->device->deviceErrorCallback))(*(this->device),HidError(HidError::DEVICE_READER_THREAD_CREATE));
             }
@@ -742,7 +742,7 @@ void HidDevice::HidDeviceReaderThread::onStartHandler()
             while(this->running)
             {
                 WaitForSingleObject( this->runningMutex, INFINITE);
-                if( this->device->isInitialized() and this->device->isOpened() )
+                if( this->device->isInitialized() && this->device->isOpened() )
                 {
                     memset(&(readOL), 0, sizeof(readOL));
                     readOL.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -801,7 +801,7 @@ void HidDevice::HidDeviceReaderThread::onStartHandler()
                 pthread_mutex_lock( &(this->runningMutex));
                 FD_ZERO(&fds);
                 FD_SET(this->device->devHandle, &fds);
-                if( (select(this->device->devHandle+1, &fds, NULL, NULL, &tv) > 0) and FD_ISSET(this->device->devHandle, &fds) )
+                if( (select(this->device->devHandle+1, &fds, NULL, NULL, &tv) > 0) && FD_ISSET(this->device->devHandle, &fds) )
                 {
                     tempBuf       = "";
                     tempBuf.resize(128, 0);
@@ -981,16 +981,16 @@ HidApi::HidApi(void (*apiErrCb)(HidError))
 
 
 
-        this->initialized = ((this->HidDllFuncs->GetAttributes)         and
-                             (this->HidDllFuncs->GetSerialNumberString) and
-                             (this->HidDllFuncs->GetManufacturerString) and
-                             (this->HidDllFuncs->GetProductString)      and
-                             (this->HidDllFuncs->SetFeature)            and
-                             (this->HidDllFuncs->GetFeature)            and
-                             (this->HidDllFuncs->GetIndexedString)      and
-                             (this->HidDllFuncs->GetPreparsedData)      and
-                             (this->HidDllFuncs->FreePreparsedData)     and
-                             (this->HidDllFuncs->GetCaps)               and
+        this->initialized = ((this->HidDllFuncs->GetAttributes)         &&
+                             (this->HidDllFuncs->GetSerialNumberString) &&
+                             (this->HidDllFuncs->GetManufacturerString) &&
+                             (this->HidDllFuncs->GetProductString)      &&
+                             (this->HidDllFuncs->SetFeature)            &&
+                             (this->HidDllFuncs->GetFeature)            &&
+                             (this->HidDllFuncs->GetIndexedString)      &&
+                             (this->HidDllFuncs->GetPreparsedData)      &&
+                             (this->HidDllFuncs->FreePreparsedData)     &&
+                             (this->HidDllFuncs->GetCaps)               &&
                              (this->HidDllFuncs->SetNumInputBuffers));
 
     #endif
@@ -1160,14 +1160,14 @@ HidDeviceList HidApi::scanDevices(unsigned short _vendorId,
 
 
 
-            if( ((_vendorId      == ANY) or ( isAttr      and ( _vendorId  == attrib.VendorID )      )) and
-                ((_productId     == ANY) or ( isAttr      and ( _productId == attrib.ProductID )     )) and
-                ((_serial        == ANY) or ( isSerial    and ( wcscmp( _serial, serial)       == 0 ))) and
-                ((_manufacturer  == ANY) or ( isManufa    and ( wcscmp( _manufacturer, manufa) == 0 ))) and
-                ((_product       == ANY) or ( isProduc    and ( wcscmp( _product, produc)      == 0 ))) and
-                ((_release       == ANY) or ( isAttr      and ( _release   == attrib.VersionNumber ) )) and
-                ((_usagePage     == ANY) or ( isPreparsed and ( _usagePage == caps.UsagePage )       )) and
-                ((_usage         == ANY) or ( isPreparsed and ( _usage     == caps.Usage )           ))
+            if( ((_vendorId      == ANY) || ( isAttr      && ( _vendorId  == attrib.VendorID )      )) &&
+                ((_productId     == ANY) || ( isAttr      && ( _productId == attrib.ProductID )     )) &&
+                ((_serial        == ANY) || ( isSerial    && ( wcscmp( _serial, serial)       == 0 ))) &&
+                ((_manufacturer  == ANY) || ( isManufa    && ( wcscmp( _manufacturer, manufa) == 0 ))) &&
+                ((_product       == ANY) || ( isProduc    && ( wcscmp( _product, produc)      == 0 ))) &&
+                ((_release       == ANY) || ( isAttr      && ( _release   == attrib.VersionNumber ) )) &&
+                ((_usagePage     == ANY) || ( isPreparsed && ( _usagePage == caps.UsagePage )       )) &&
+                ((_usage         == ANY) || ( isPreparsed && ( _usage     == caps.Usage )           ))
             )
             {
                 HidDevice temp;
@@ -1320,14 +1320,14 @@ HidDeviceList HidApi::scanDevices(unsigned short _vendorId,
 
 
 
-                    if(bus_type == BUS_USB or bus_type == BUS_BLUETOOTH)
+                    if(bus_type == BUS_USB || bus_type == BUS_BLUETOOTH)
                     {
-                        if( ((_vendorId      == ANY) or ( isAttr      and ( _vendorId  == dev_vid )                    )) and
-                            ((_productId     == ANY) or ( isAttr      and ( _productId == dev_pid )                    )) and
-                            ((_serial        == ANY) or ( isSerial    and ( wcscmp( _serial, &(serial[0])) == 0 )      )) and
-                            ((_manufacturer  == ANY) or ( isManufa    and ( wcscmp( _manufacturer, &(manufa[0])) == 0 ))) and
-                            ((_product       == ANY) or ( isProduc    and ( wcscmp( _product, &(produc[0]))      == 0 ))) and
-                            ((_release       == ANY) or ( isReleas    and ( _release   == dev_rel )                    ))
+                        if( ((_vendorId      == ANY) || ( isAttr      && ( _vendorId  == dev_vid )                    )) &&
+                            ((_productId     == ANY) || ( isAttr      && ( _productId == dev_pid )                    )) &&
+                            ((_serial        == ANY) || ( isSerial    && ( wcscmp( _serial, &(serial[0])) == 0 )      )) &&
+                            ((_manufacturer  == ANY) || ( isManufa    && ( wcscmp( _manufacturer, &(manufa[0])) == 0 ))) &&
+                            ((_product       == ANY) || ( isProduc    && ( wcscmp( _product, &(produc[0]))      == 0 ))) &&
+                            ((_release       == ANY) || ( isReleas    && ( _release   == dev_rel )                    ))
                         )
                         {
                             HidDevice temp;
@@ -1419,7 +1419,7 @@ void HidApi::HidDeviceMonitoringThread::run()
                                                0                                                           // pointer of thread identifier
                                              );
 
-            if( (this->threadHandle == INVALID_HANDLE_VALUE) and this->parent->apiErrorCallback )
+            if( (this->threadHandle == INVALID_HANDLE_VALUE) && this->parent->apiErrorCallback )
             {
                 (*(this->parent->apiErrorCallback))(HidError(HidError::API_MONITOR_THREAD_CREATE));
             }
@@ -1432,7 +1432,7 @@ void HidApi::HidDeviceMonitoringThread::run()
                                       (void*)(this)
                                     );
 
-            if( (res != 0) and this->parent->apiErrorCallback )
+            if( (res != 0) && this->parent->apiErrorCallback )
             {
                 (*(this->parent->apiErrorCallback))(HidError(HidError::API_MONITOR_THREAD_CREATE));
             }
@@ -1582,7 +1582,7 @@ void HidApi::HidDeviceMonitoringThread::onStartHandler()
                 pthread_mutex_lock( &(this->runningMutex));
                 FD_ZERO(&fds);
                 FD_SET(fd, &fds);
-                if( (select(fd+1, &fds, NULL, NULL, &tv) > 0) and FD_ISSET(fd, &fds) )
+                if( (select(fd+1, &fds, NULL, NULL, &tv) > 0) && FD_ISSET(fd, &fds) )
                 {
                     dev = udev_monitor_receive_device(this->mon);
                     if( dev )
