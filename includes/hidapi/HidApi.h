@@ -55,7 +55,7 @@
         #include <winbase.h>
     #endif
 
-    #include <ntdef.h>
+    //#include <ntdef.h>
     #include <setupapi.h>
     #include <winioctl.h>
     #include <stdlib.h>

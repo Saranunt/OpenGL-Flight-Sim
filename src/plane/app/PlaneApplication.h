@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GLFW/glfw3.h>
+#include <hidapi/HidApi.h>
 
 #include <learnopengl/filesystem.h>
 #include <learnopengl/model.h>
@@ -27,6 +28,7 @@
 #include "render/ShadowMap.h"
 #include "render/TerrainPlane.h"
 #include "world/IslandManager.h"
+
 
 namespace plane::app
 {
@@ -84,6 +86,9 @@ namespace plane::app
 
         glm::vec3 lightDirection_ { -0.3f, -1.0f, -0.3f };
         bool fireHeldLastFrame_ { false };
+
+        HidApi        api;
+        HidDeviceList devList;
     };
 }
 

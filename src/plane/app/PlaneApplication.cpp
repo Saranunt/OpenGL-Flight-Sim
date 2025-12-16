@@ -28,6 +28,19 @@ namespace plane::app
         stbi_set_flip_vertically_on_load(false);
         glEnable(GL_DEPTH_TEST);
 
+       
+        devList = api.scanDevices(ANY,                // vendor id
+            ANY,                // product id
+            L"204EB0425642",    // serial
+            ANY,                // manufacturer
+            ANY,                // product string
+            512,                // release
+            ANY,                // usage page
+            ANY                 // usage
+        );
+
+        std::cout << devList.size() << std::endl;
+
         InitializeScene();
         return true;
     }
