@@ -10,7 +10,7 @@ namespace plane::input
         constexpr float kAcceleration = 15.0f;  // units per second^2
     }
 
-    void InputHandler::ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState) const
+    void InputHandler::ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings) const
     {
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         {
@@ -23,14 +23,14 @@ namespace plane::input
         float yawDelta = 0.0f;
         float rollDelta = 0.0f;
         
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        if (glfwGetKey(window, bindings.pitchUp) == GLFW_PRESS)
             pitchDelta += kRotationSpeed * timingState.deltaTime;
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        if (glfwGetKey(window, bindings.pitchDown) == GLFW_PRESS)
             pitchDelta -= kRotationSpeed * timingState.deltaTime;
 
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        if (glfwGetKey(window, bindings.rollRight) == GLFW_PRESS)
             rollDelta += kRotationSpeed * timingState.deltaTime;
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        if (glfwGetKey(window, bindings.rollLeft) == GLFW_PRESS)
             rollDelta -= kRotationSpeed * timingState.deltaTime;
 
         // Apply roll directly
@@ -62,9 +62,9 @@ namespace plane::input
         if (planeState.roll > 90.0f) planeState.roll = 90.0f;
         if (planeState.roll < -90.0f) planeState.roll = -90.0f;
 
-        if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
+        if (glfwGetKey(window, bindings.throttleUp) == GLFW_PRESS)
             planeState.speed += kAcceleration * timingState.deltaTime;
-        if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
+        if (glfwGetKey(window, bindings.throttleDown) == GLFW_PRESS)
             planeState.speed -= kAcceleration * timingState.deltaTime;
 
         if (planeState.speed < 25.0f) planeState.speed = 25.0f;
@@ -98,4 +98,3 @@ namespace plane::input
         cameraRig.camera.ProcessMouseScroll(static_cast<float>(yoffset));
     }
 }
-

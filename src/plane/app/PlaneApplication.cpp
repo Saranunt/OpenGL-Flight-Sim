@@ -8,6 +8,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <iostream>
+#include <algorithm>
 
 namespace plane::app
 {
@@ -40,19 +41,25 @@ namespace plane::app
             timingState_.deltaTime = currentFrame - timingState_.lastFrame;
             timingState_.lastFrame = currentFrame;
 
-            inputHandler_.ProcessInput(window_, planeState_, timingState_);
-
-            // Fire a bullet when the player taps the spacebar.
-            int spaceState = glfwGetKey(window_, GLFW_KEY_SPACE);
-            bool firePressedThisFrame = (spaceState == GLFW_PRESS); // && !fireHeldLastFrame_;
-            if (firePressedThisFrame)
+            for (std::size_t i = 0; i < players_.size(); ++i)
             {
-                shootingSystem_.FireBullet(planeState_);
+                auto& player = players_[i];
+                inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i]);
+
+                // Fire bullets at a rate-limited cadence while the fire key is held.
+                player.fireCooldown = std::max(0.0f, player.fireCooldown - timingState_.deltaTime);
+                int fireKeyState = glfwGetKey(window_, inputBindings_[i].fire);
+                bool firePressed = (fireKeyState == GLFW_PRESS);
+                if (firePressed && player.fireCooldown <= 0.0f)
+                {
+                    shootingSystem_.FireBullet(player.state);
+                    player.fireCooldown = (player.fireRatePerSec > 0.0f) ? (1.0f / player.fireRatePerSec) : 0.0f;
+                }
+
+                planeController_.UpdateFlightDynamics(player.state, timingState_.deltaTime);
+                collisionSystem_.CheckAndResolveCollisions(player.state, timingState_.deltaTime);
+                player.cameraController.Update(player.state, player.cameraRig);
             }
-            fireHeldLastFrame_ = (spaceState == GLFW_PRESS);
-            planeController_.UpdateFlightDynamics(planeState_, timingState_.deltaTime);
-            collisionSystem_.CheckAndResolveCollisions(planeState_, timingState_.deltaTime);
-            cameraController_.Update(planeState_, cameraRig_);
 
             Render();
 
@@ -116,6 +123,7 @@ namespace plane::app
 
     void PlaneApplication::InitializeScene()
     {
+        InitializePlayers();
         shader_ = std::make_unique<Shader>("plane.vs", "plane.fs");
         shadowShader_ = std::make_unique<Shader>("shadow_depth.vs", "shadow_depth.fs");
         planeModel_ = std::make_unique<Model>(FileSystem::getPath("resources/objects/plane/plane.dae"));
@@ -137,6 +145,30 @@ namespace plane::app
         collisionSystem_.Initialize(islandManager_, &terrainPlane_);
     }
 
+    void PlaneApplication::InitializePlayers()
+    {
+        players_[0].state.position = glm::vec3(100.0f, 26.0f, 0.0f);
+        players_[1].state.position = glm::vec3(-100.0f, 26.0f, 0.0f);
+
+        inputBindings_[0] = input::InputBindings{};
+        inputBindings_[1] = input::InputBindings{
+            GLFW_KEY_UP,
+            GLFW_KEY_DOWN,
+            GLFW_KEY_LEFT,
+            GLFW_KEY_RIGHT,
+            GLFW_KEY_RIGHT_SHIFT,
+            GLFW_KEY_RIGHT_CONTROL,
+            GLFW_KEY_ENTER
+        };
+
+        for (auto& player : players_)
+        {
+            player.cameraRig.camera.Position = player.state.position + glm::vec3(0.0f, 1.0f, -12.0f);
+            player.cameraRig.camera.Front = glm::normalize(player.state.position - player.cameraRig.camera.Position);
+            player.cameraRig.firstMouse = true;
+        }
+    }
+
     void PlaneApplication::Render()
     {
         // First render depth from the sun's perspective so the main pass can shadow.
@@ -147,18 +179,37 @@ namespace plane::app
         glClearColor(0.5f, 0.7f, 0.9f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glm::mat4 projection = glm::perspective(
-            glm::radians(cameraRig_.camera.Zoom),
-            static_cast<float>(core::AppConfig::ScreenWidth) / static_cast<float>(core::AppConfig::ScreenHeight),
-            0.1f,
-            1000.0f
-        );
-        glm::mat4 view = cameraRig_.camera.GetViewMatrix();
+        float halfWidth = core::AppConfig::ScreenWidth * 0.5f;
+        float height = static_cast<float>(core::AppConfig::ScreenHeight);
+        float aspect = halfWidth / height;
 
-        RenderColorPass(projection, view, lightSpaceMatrix);
+        for (std::size_t i = 0; i < players_.size(); ++i)
+        {
+            glViewport(static_cast<GLint>(i * halfWidth), 0, static_cast<GLsizei>(halfWidth), static_cast<GLsizei>(height));
+
+            glm::mat4 projection = glm::perspective(
+                glm::radians(players_[i].cameraRig.camera.Zoom),
+                aspect,
+                0.1f,
+                1000.0f
+            );
+            glm::mat4 view = players_[i].cameraRig.camera.GetViewMatrix();
+
+            RenderColorPass(projection, view, lightSpaceMatrix, players_[i].cameraRig);
+        }
+
+        // Draw a simple vertical divider between the two viewports.
+        glEnable(GL_SCISSOR_TEST);
+        const int dividerWidth = 4;
+        int dividerX = static_cast<int>(halfWidth) - dividerWidth / 2;
+        glScissor(dividerX, 0, dividerWidth, core::AppConfig::ScreenHeight);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glDisable(GL_SCISSOR_TEST);
 
         // Feature placeholders still receive deltaTime so they remain pluggable.
-        shootingSystem_.Update(timingState_.deltaTime, planeState_);
+        shootingSystem_.Update(timingState_.deltaTime, players_[0].state);
+        shootingSystem_.Update(timingState_.deltaTime, players_[1].state);
         skeletalAnimationSystem_.Update(timingState_.deltaTime);
         movementSystem_.Update(timingState_.deltaTime);
         multiplayerManager_.Update(timingState_.deltaTime);
@@ -174,7 +225,7 @@ namespace plane::app
         auto* app = static_cast<PlaneApplication*>(glfwGetWindowUserPointer(window));
         if (app != nullptr)
         {
-            app->inputHandler_.OnMouseMove(xpos, ypos, app->cameraRig_);
+            app->inputHandler_.OnMouseMove(xpos, ypos, app->players_[0].cameraRig);
         }
     }
 
@@ -183,7 +234,7 @@ namespace plane::app
         auto* app = static_cast<PlaneApplication*>(glfwGetWindowUserPointer(window));
         if (app != nullptr)
         {
-            app->inputHandler_.OnScroll(yoffset, app->cameraRig_);
+            app->inputHandler_.OnScroll(yoffset, app->players_[0].cameraRig);
         }
     }
 
@@ -208,14 +259,14 @@ namespace plane::app
         shadowMap_.Unbind();
     }
 
-    void PlaneApplication::RenderColorPass(const glm::mat4& projection, const glm::mat4& view, const glm::mat4& lightSpaceMatrix)
+    void PlaneApplication::RenderColorPass(const glm::mat4& projection, const glm::mat4& view, const glm::mat4& lightSpaceMatrix, const core::CameraRig& cameraRig)
     {
         shader_->use();
         shader_->setMat4("projection", projection);
         shader_->setMat4("view", view);
         shader_->setMat4("lightSpaceMatrix", lightSpaceMatrix);
         shader_->setVec3("lightDir", glm::normalize(lightDirection_));
-        shader_->setVec3("viewPos", cameraRig_.camera.Position);
+        shader_->setVec3("viewPos", cameraRig.camera.Position);
         shader_->setInt("shadowMap", 1);
 
         // Depth texture lives on unit 1 so diffuse maps can stay on unit 0.
@@ -228,7 +279,7 @@ namespace plane::app
         shootingSystem_.Render(*shader_);
         
         // Draw health bar above the plane
-        healthBarRenderer_.RenderHealthBar(planeState_, cameraRig_, projection, view, *shader_);
+        // healthBarRenderer_.RenderHealthBar( player.state , player.cameraRig, projection, view, *shader_);
 
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, 0);
@@ -239,22 +290,26 @@ namespace plane::app
         // Draw order keeps the large ground first so depth testing is stable.
         groundPlane_.Draw(shader, bindTextures);
         terrainPlane_.Draw(shader, bindTextures);  // Use heightmap terrain instead of island models
-        
-        // Only render plane if it's still alive
-        if (planeState_.isAlive)
-        {
-            planeRenderer_.Draw(*planeModel_, shader, planeState_);
+        for (const auto& player : players_)
+        {   
+            if (player.state.isAlive)
+            planeRenderer_.Draw(*planeModel_, shader, player.state);
         }
     }
 
     glm::mat4 PlaneApplication::CalculateLightSpaceMatrix() const
     {
-        // Build an orthographic frustum that follows the plane, emulating sun light.
+        // Build an orthographic frustum that follows both planes, emulating sun light.
         glm::vec3 lightDir = glm::normalize(lightDirection_);
-        glm::vec3 lightPos = planeState_.position - lightDir * 300.0f + glm::vec3(0.0f, 150.0f, 0.0f);
-        glm::mat4 lightProjection = glm::ortho(-800.0f, 800.0f, -800.0f, 800.0f, 1.0f, 1500.0f);
-        glm::mat4 lightView = glm::lookAt(lightPos, planeState_.position, glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::vec3 center = 0.5f * (players_[0].state.position + players_[1].state.position);
+        float radius = std::max(
+            glm::length(players_[0].state.position - center),
+            glm::length(players_[1].state.position - center)
+        );
+        float orthoExtent = 800.0f + radius;
+        glm::vec3 lightPos = center - lightDir * 300.0f + glm::vec3(0.0f, 150.0f, 0.0f);
+        glm::mat4 lightProjection = glm::ortho(-orthoExtent, orthoExtent, -orthoExtent, orthoExtent, 1.0f, 1500.0f);
+        glm::mat4 lightView = glm::lookAt(lightPos, center, glm::vec3(0.0f, 1.0f, 0.0f));
         return lightProjection * lightView;
     }
 }
-

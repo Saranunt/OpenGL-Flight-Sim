@@ -8,12 +8,22 @@
 
 namespace plane::input
 {
+    struct InputBindings
+    {
+        int pitchUp { GLFW_KEY_W };
+        int pitchDown { GLFW_KEY_S };
+        int rollLeft { GLFW_KEY_A };
+        int rollRight { GLFW_KEY_D };
+        int throttleUp { GLFW_KEY_Z };
+        int throttleDown { GLFW_KEY_X };
+        int fire { GLFW_KEY_SPACE };
+    };
+
     class InputHandler
     {
     public:
-        void ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState) const;
+        void ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings) const;
         void OnMouseMove(double xposIn, double yposIn, core::CameraRig& cameraRig) const;
         void OnScroll(double yoffset, core::CameraRig& cameraRig) const;
     };
 }
-

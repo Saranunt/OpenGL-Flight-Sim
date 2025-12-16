@@ -9,6 +9,7 @@
 #include <glm/glm.hpp>
 
 #include <memory>
+#include <array>
 
 #include "core/AppConfig.h"
 #include "core/CameraController.h"
@@ -46,9 +47,10 @@ namespace plane::app
         bool InitializeWindow();
         bool InitializeGlad();
         void InitializeScene();
+        void InitializePlayers();
         void Render();
         void RenderDepthPass(const glm::mat4& lightSpaceMatrix);
-        void RenderColorPass(const glm::mat4& projection, const glm::mat4& view, const glm::mat4& lightSpaceMatrix);
+        void RenderColorPass(const glm::mat4& projection, const glm::mat4& view, const glm::mat4& lightSpaceMatrix, const core::CameraRig& cameraRig);
         void RenderSceneGeometry(Shader& shader, bool bindTextures);
         glm::mat4 CalculateLightSpaceMatrix() const;
 
@@ -57,6 +59,15 @@ namespace plane::app
         static void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
         static PlaneApplication* s_instance_;
+
+        struct PlayerContext
+        {
+            core::PlaneState state;
+            core::CameraRig cameraRig;
+            core::CameraController cameraController;
+            float fireCooldown { 0.0f };
+            float fireRatePerSec { 8.0f }; // bullets per second
+        };
 
         GLFWwindow* window_ { nullptr };
         std::unique_ptr<Shader> shader_;
@@ -71,10 +82,9 @@ namespace plane::app
         render::ShadowMap shadowMap_;
         world::IslandManager islandManager_;
 
-        core::PlaneState planeState_;
-        core::CameraRig cameraRig_;
+        std::array<PlayerContext, 2> players_;
+        std::array<input::InputBindings, 2> inputBindings_;
         core::TimingState timingState_;
-        core::CameraController cameraController_;
         entities::PlaneController planeController_;
         input::InputHandler inputHandler_;
         physics::CollisionSystem collisionSystem_;
@@ -85,7 +95,5 @@ namespace plane::app
         features::multiplayer::MultiplayerManager multiplayerManager_;
 
         glm::vec3 lightDirection_ { -0.3f, -1.0f, -0.3f };
-        bool fireHeldLastFrame_ { false };
     };
 }
-
