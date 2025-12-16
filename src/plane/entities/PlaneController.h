@@ -14,6 +14,9 @@ namespace plane::entities
 
     private:
         void NormalizeYaw(core::PlaneState& planeState) const;
+        
+        // Track previous roll to calculate smooth derivative instead of using wrapped angle
+        mutable float previousRoll = 0.0f;
     };
 }
 

@@ -12,7 +12,7 @@ namespace plane::features::shooting
 {
     namespace
     {
-        constexpr float kBulletSpeed = 80.0f;  // units per second
+        constexpr float kBulletSpeed = 160.0f;  // units per second
         constexpr float kBulletLifetime = 3.0f;
     }
 

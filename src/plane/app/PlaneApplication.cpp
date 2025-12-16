@@ -51,6 +51,7 @@ namespace plane::app
             }
             fireHeldLastFrame_ = (spaceState == GLFW_PRESS);
             planeController_.UpdateFlightDynamics(planeState_, timingState_.deltaTime);
+            collisionSystem_.CheckAndResolveCollisions(planeState_, timingState_.deltaTime);
             cameraController_.Update(planeState_, cameraRig_);
 
             Render();
@@ -63,6 +64,7 @@ namespace plane::app
     void PlaneApplication::Shutdown()
     {
         groundPlane_.Shutdown();
+        terrainPlane_.Shutdown();
         shadowMap_.Shutdown();
         glfwTerminate();
     }
@@ -120,6 +122,7 @@ namespace plane::app
 
         islandManager_.GenerateIslands();
         groundPlane_.Initialize(FileSystem::getPath("resources/textures/wave2.jpg"));
+        terrainPlane_.Initialize(FileSystem::getPath("resources/objects/island4/island_baseColor.jpeg"), 2000.0f, 100);
         if (!shadowMap_.Initialize(2048, 2048))
         {
             std::cout << "Failed to initialize shadow map resources." << std::endl;
@@ -129,6 +132,7 @@ namespace plane::app
         skeletalAnimationSystem_.Initialize();
         movementSystem_.Initialize();
         multiplayerManager_.Initialize();
+        collisionSystem_.Initialize(islandManager_, &terrainPlane_);
     }
 
     void PlaneApplication::Render()
@@ -229,7 +233,7 @@ namespace plane::app
     {
         // Draw order keeps the large ground first so depth testing is stable.
         groundPlane_.Draw(shader, bindTextures);
-        islandManager_.Draw(*islandModel_, shader);
+        terrainPlane_.Draw(shader, bindTextures);  // Use heightmap terrain instead of island models
         planeRenderer_.Draw(*planeModel_, shader, planeState_);
     }
 

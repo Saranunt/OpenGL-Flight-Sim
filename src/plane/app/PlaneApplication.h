@@ -21,9 +21,11 @@
 #include "features/multiplayer/MultiplayerManager.h"
 #include "features/shooting/ShootingSystem.h"
 #include "input/InputHandler.h"
+#include "physics/CollisionSystem.h"
 #include "render/GroundPlane.h"
 #include "render/PlaneRenderer.h"
 #include "render/ShadowMap.h"
+#include "render/TerrainPlane.h"
 #include "world/IslandManager.h"
 
 namespace plane::app
@@ -62,6 +64,7 @@ namespace plane::app
         std::unique_ptr<Shader> shadowShader_;
 
         render::GroundPlane groundPlane_;
+        render::TerrainPlane terrainPlane_;
         render::PlaneRenderer planeRenderer_;
         render::ShadowMap shadowMap_;
         world::IslandManager islandManager_;
@@ -72,6 +75,7 @@ namespace plane::app
         core::CameraController cameraController_;
         entities::PlaneController planeController_;
         input::InputHandler inputHandler_;
+        physics::CollisionSystem collisionSystem_;
 
         features::shooting::ShootingSystem shootingSystem_;
         features::animation::SkeletalAnimationSystem skeletalAnimationSystem_;
