@@ -65,6 +65,7 @@ namespace plane::app
     {
         groundPlane_.Shutdown();
         terrainPlane_.Shutdown();
+        healthBarRenderer_.Shutdown();
         shadowMap_.Shutdown();
         glfwTerminate();
     }
@@ -132,6 +133,7 @@ namespace plane::app
         skeletalAnimationSystem_.Initialize();
         movementSystem_.Initialize();
         multiplayerManager_.Initialize();
+        healthBarRenderer_.Initialize();
         collisionSystem_.Initialize(islandManager_, &terrainPlane_);
     }
 
@@ -156,7 +158,7 @@ namespace plane::app
         RenderColorPass(projection, view, lightSpaceMatrix);
 
         // Feature placeholders still receive deltaTime so they remain pluggable.
-        shootingSystem_.Update(timingState_.deltaTime);
+        shootingSystem_.Update(timingState_.deltaTime, planeState_);
         skeletalAnimationSystem_.Update(timingState_.deltaTime);
         movementSystem_.Update(timingState_.deltaTime);
         multiplayerManager_.Update(timingState_.deltaTime);
@@ -224,6 +226,9 @@ namespace plane::app
 
         // Draw bullets after the main geometry so they appear on top.
         shootingSystem_.Render(*shader_);
+        
+        // Draw health bar above the plane
+        healthBarRenderer_.RenderHealthBar(planeState_, cameraRig_, projection, view, *shader_);
 
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, 0);
@@ -234,7 +239,12 @@ namespace plane::app
         // Draw order keeps the large ground first so depth testing is stable.
         groundPlane_.Draw(shader, bindTextures);
         terrainPlane_.Draw(shader, bindTextures);  // Use heightmap terrain instead of island models
-        planeRenderer_.Draw(*planeModel_, shader, planeState_);
+        
+        // Only render plane if it's still alive
+        if (planeState_.isAlive)
+        {
+            planeRenderer_.Draw(*planeModel_, shader, planeState_);
+        }
     }
 
     glm::mat4 PlaneApplication::CalculateLightSpaceMatrix() const

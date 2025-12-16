@@ -23,6 +23,7 @@
 #include "input/InputHandler.h"
 #include "physics/CollisionSystem.h"
 #include "render/GroundPlane.h"
+#include "render/HealthBarRenderer.h"
 #include "render/PlaneRenderer.h"
 #include "render/ShadowMap.h"
 #include "render/TerrainPlane.h"
@@ -66,6 +67,7 @@ namespace plane::app
         render::GroundPlane groundPlane_;
         render::TerrainPlane terrainPlane_;
         render::PlaneRenderer planeRenderer_;
+        render::HealthBarRenderer healthBarRenderer_;
         render::ShadowMap shadowMap_;
         world::IslandManager islandManager_;
 

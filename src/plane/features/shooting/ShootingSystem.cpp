@@ -8,12 +8,16 @@
 
 #include "core/PlaneState.h"
 
+#include <iostream>
+
 namespace plane::features::shooting
 {
     namespace
     {
         constexpr float kBulletSpeed = 160.0f;  // units per second
         constexpr float kBulletLifetime = 3.0f;
+        constexpr float kBulletDamage = 5.0f;   // Damage per bullet hit
+        constexpr float kPlaneCollisionRadius = 3.0f;  // Plane's collision radius
     }
 
     void ShootingSystem::Initialize()
@@ -47,17 +51,45 @@ namespace plane::features::shooting
         glBindVertexArray(0);
     }
 
-    void ShootingSystem::Update(float deltaTime)
+    void ShootingSystem::Update(float deltaTime, core::PlaneState& planeState)
     {
         if (bullets_.empty())
         {
             return;
         }
 
-        for (auto& bullet : bullets_)
+        // Track which bullets hit the plane
+        std::vector<size_t> bulletsToRemove;
+
+        for (size_t i = 0; i < bullets_.size(); ++i)
         {
+            auto& bullet = bullets_[i];
             bullet.position += bullet.velocity * deltaTime;
             bullet.lifetime -= deltaTime;
+
+            // Check collision with plane
+            if (planeState.isAlive && CheckBulletPlaneCollision(bullet, planeState))
+            {
+                // Apply damage to plane
+                planeState.health -= kBulletDamage;
+                std::cout << "Plane hit! Health: " << planeState.health << std::endl;
+                
+                if (planeState.health <= 0.0f)
+                {
+                    planeState.health = 0.0f;
+                    planeState.isAlive = false;
+                    std::cout << "Plane destroyed!" << std::endl;
+                }
+                
+                // Mark bullet for removal
+                bulletsToRemove.push_back(i);
+            }
+        }
+
+        // Remove bullets that hit the plane (iterate backwards to maintain indices)
+        for (auto it = bulletsToRemove.rbegin(); it != bulletsToRemove.rend(); ++it)
+        {
+            bullets_.erase(bullets_.begin() + *it);
         }
 
         // Remove bullets whose lifetime expired.
@@ -68,6 +100,14 @@ namespace plane::features::shooting
                 [](const Bullet& b) { return b.lifetime <= 0.0f; }),
             bullets_.end()
         );
+    }
+
+    bool ShootingSystem::CheckBulletPlaneCollision(const Bullet& bullet, const core::PlaneState& planeState) const
+    {
+        // Simple sphere-sphere collision detection
+        float distance = glm::length(bullet.position - planeState.position);
+        float combinedRadius = bullet.radius + kPlaneCollisionRadius;
+        return distance <= combinedRadius;
     }
 
     void ShootingSystem::FireBullet(const core::PlaneState& planeState)
@@ -83,8 +123,12 @@ namespace plane::features::shooting
         );
         forward = glm::normalize(forward);
 
+        // Spawn bullet outside the plane's collision radius to avoid self-collision
+        // Add a small margin (0.5f) beyond the collision radius for safety
+        float spawnDistance = kPlaneCollisionRadius + 0.5f;
+
         Bullet bullet;
-        bullet.position = planeState.position;
+        bullet.position = planeState.position + forward * spawnDistance;
         bullet.velocity = forward * kBulletSpeed;
         bullet.radius = 0.5f;
         bullet.lifetime = kBulletLifetime;
