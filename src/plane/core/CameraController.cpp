@@ -12,7 +12,7 @@ namespace plane::core
     void CameraController::Update(const PlaneState& planeState, CameraRig& cameraRig) const
     {
         // Camera follows plane's orientation (yaw, pitch, roll) to make plane appear static.
-        constexpr float cameraDistance = 8.0f;
+        constexpr float cameraDistance = 12.0f;
         constexpr float cameraHeight = 1.0f;
 
         // Smoothly interpolate toward target orientation
