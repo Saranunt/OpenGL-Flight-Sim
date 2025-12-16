@@ -1,11 +1,13 @@
 #include "InputHandler.h"
+#include <glm/glm.hpp>
+#include <cmath>
 
 namespace plane::input
 {
     namespace
     {
-        constexpr float kRotationSpeed = 10.0f; // degrees per second
-        constexpr float kAcceleration = 10.0f;  // units per second^2
+        constexpr float kRotationSpeed = 40.0f; // degrees per second
+        constexpr float kAcceleration = 15.0f;  // units per second^2
     }
 
     void InputHandler::ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState) const
@@ -16,31 +18,56 @@ namespace plane::input
         }
 
         // Directly map keyboard input to Euler adjustments / throttle.
+        // Store rotation deltas
+        float pitchDelta = 0.0f;
+        float yawDelta = 0.0f;
+        float rollDelta = 0.0f;
+        
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            planeState.pitch += kRotationSpeed * timingState.deltaTime;
+            pitchDelta += kRotationSpeed * timingState.deltaTime;
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            planeState.pitch -= kRotationSpeed * timingState.deltaTime;
+            pitchDelta -= kRotationSpeed * timingState.deltaTime;
 
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-            planeState.roll += kRotationSpeed * timingState.deltaTime;
+            rollDelta += kRotationSpeed * timingState.deltaTime;
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-            planeState.roll -= kRotationSpeed * timingState.deltaTime;
+            rollDelta -= kRotationSpeed * timingState.deltaTime;
 
-        if (planeState.pitch > 89.0f) planeState.pitch = 89.0f;
-        if (planeState.pitch < -89.0f) planeState.pitch = -89.0f;
+        // Apply roll directly
+        planeState.roll += rollDelta;
+        
+        // Apply pitch and yaw with roll compensation
+        // When rolled, pitch input should affect both pitch and yaw
+        float rollRad = glm::radians(planeState.roll);
+        
+        // Reduce pitch effect as roll approaches ±90°
+        // Use max(0.1, cos(abs(roll))) to clamp minimum at 0.1
+        float cosAbsRoll = std::abs(std::cos(rollRad));
+        float pitchDamping = (cosAbsRoll > 0.1f) ? cosAbsRoll : 0.1f;
+        float dampedPitchDelta = pitchDelta * pitchDamping;
+        
+        planeState.pitch += dampedPitchDelta * std::cos(rollRad);
+        planeState.yaw += dampedPitchDelta * std::sin(rollRad);
+
+        // if (planeState.pitch > 89.0f) planeState.pitch = 89.0f;
+        // if (planeState.pitch < -89.0f) planeState.pitch = -89.0f;
 
         while (planeState.yaw < 0.0f) planeState.yaw += 360.0f;
         while (planeState.yaw >= 360.0f) planeState.yaw -= 360.0f;
+        while (planeState.pitch < 0.0f) planeState.pitch += 360.0f;
+        while (planeState.pitch >= 360.0f) planeState.pitch -= 360.0f;
+        // while (planeState.roll < 0.0f) planeState.roll += 360.0f;
+        // while (planeState.roll >= 360.0f) planeState.roll -= 360.0f;
 
-        if (planeState.roll > 45.0f) planeState.roll = 45.0f;
-        if (planeState.roll < -45.0f) planeState.roll = -45.0f;
+        if (planeState.roll > 90.0f) planeState.roll = 90.0f;
+        if (planeState.roll < -90.0f) planeState.roll = -90.0f;
 
         if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS)
             planeState.speed += kAcceleration * timingState.deltaTime;
         if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS)
             planeState.speed -= kAcceleration * timingState.deltaTime;
 
-        if (planeState.speed < 1.0f) planeState.speed = 1.0f;
+        if (planeState.speed < 25.0f) planeState.speed = 25.0f;
         if (planeState.speed > 50.0f) planeState.speed = 50.0f;
     }
 
