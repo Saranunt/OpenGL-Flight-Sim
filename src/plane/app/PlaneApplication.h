@@ -14,6 +14,7 @@
 #include "core/AppConfig.h"
 #include "core/CameraController.h"
 #include "core/CameraRig.h"
+#include "core/GameState.h"
 #include "core/PlaneState.h"
 #include "core/Timing.h"
 #include "entities/PlaneController.h"
@@ -27,6 +28,7 @@
 #include "render/HealthBarRenderer.h"
 #include "render/PlaneRenderer.h"
 #include "render/ShadowMap.h"
+#include "render/StartMenuRenderer.h"
 #include "render/TerrainPlane.h"
 #include "world/IslandManager.h"
 
@@ -48,7 +50,13 @@ namespace plane::app
         bool InitializeGlad();
         void InitializeScene();
         void InitializePlayers();
+        void Update();
         void Render();
+        void RenderStartMenu();
+        void RenderGameplay();
+        void RenderGameOver();
+        void RestartGame();
+        void CheckGameOver();
         void RenderDepthPass(const glm::mat4& lightSpaceMatrix);
         void RenderColorPass(const glm::mat4& projection, const glm::mat4& view, const glm::mat4& lightSpaceMatrix, const core::CameraRig& cameraRig);
         void RenderSceneGeometry(Shader& shader, bool bindTextures);
@@ -79,6 +87,7 @@ namespace plane::app
         render::TerrainPlane terrainPlane_;
         render::PlaneRenderer planeRenderer_;
         render::HealthBarRenderer healthBarRenderer_;
+        render::StartMenuRenderer startMenuRenderer_;
         render::ShadowMap shadowMap_;
         world::IslandManager islandManager_;
 
@@ -95,5 +104,8 @@ namespace plane::app
         features::multiplayer::MultiplayerManager multiplayerManager_;
 
         glm::vec3 lightDirection_ { -0.3f, -1.0f, -0.3f };
+        
+        core::GameState gameState_ { core::GameState::StartMenu };
+        bool spacePressed_ { false };
     };
 }

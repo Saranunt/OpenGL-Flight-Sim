@@ -3,6 +3,8 @@
 #include <glad/glad.h>
 
 #include <learnopengl/shader_m.h>
+#include <learnopengl/model.h>
+#include <learnopengl/filesystem.h>
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -22,33 +24,13 @@ namespace plane::features::shooting
 
     void ShootingSystem::Initialize()
     {
-        InitializeGeometry();
+        // Load bullet model once
+        bulletModel_ = std::make_unique<Model>(FileSystem::getPath("resources/objects/bullet/Bullet.dae"));
     }
 
     void ShootingSystem::InitializeGeometry()
     {
-        // A tiny triangle in local space pointing down -Z.
-        const float size = 0.5f;
-        float vertices[] = {
-            // positions
-            0.0f,  0.0f,  0.0f,
-           -size, -size, -size * 2.0f,
-            size, -size, -size * 2.0f
-        };
-
-        glGenVertexArrays(1, &bulletVao_);
-        glGenBuffers(1, &bulletVbo_);
-
-        glBindVertexArray(bulletVao_);
-
-        glBindBuffer(GL_ARRAY_BUFFER, bulletVbo_);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindVertexArray(0);
+        // No-op: model-based rendering now
     }
 
     void ShootingSystem::Update(float deltaTime, core::PlaneState& planeState)
@@ -138,17 +120,9 @@ namespace plane::features::shooting
 
     void ShootingSystem::Render(Shader& shader) const
     {
-        if (bullets_.empty() || bulletVao_ == 0)
+        if (bullets_.empty() || !bulletModel_)
         {
             return;
-        }
-
-        glBindVertexArray(bulletVao_);
-
-        // Simple constant color for bullets if the shader supports it.
-        if (shader.ID != 0)
-        {
-            shader.setVec3("overrideColor", glm::vec3(1.0f, 0.9f, 0.2f));
         }
 
         for (const auto& bullet : bullets_)
@@ -156,7 +130,7 @@ namespace plane::features::shooting
             glm::mat4 model = glm::mat4(1.0f);
             model = glm::translate(model, bullet.position);
 
-            // Align the triangle roughly with the velocity direction.
+            // Align the model with the velocity direction.
             glm::vec3 dir = glm::normalize(bullet.velocity);
             if (glm::length(dir) < 0.0001f)
             {
@@ -174,14 +148,12 @@ namespace plane::features::shooting
 
             model *= orient;
 
-            // Make the bullet visually small.
-            model = glm::scale(model, glm::vec3(0.5f));
+            // Adjust model scale .
+            model = glm::scale(model, glm::vec3(0.25f));
 
             shader.setMat4("model", model);
-            glDrawArrays(GL_TRIANGLES, 0, 3);
+            bulletModel_->Draw(shader);
         }
-
-        glBindVertexArray(0);
     }
 }
 

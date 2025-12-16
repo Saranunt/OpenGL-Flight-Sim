@@ -7,6 +7,7 @@ namespace plane::input
     namespace
     {
         constexpr float kRotationSpeed = 40.0f; // degrees per second
+        constexpr float kRotationSpeed_pitch = 20.0f; // degrees per second
         constexpr float kAcceleration = 15.0f;  // units per second^2
     }
 
@@ -24,9 +25,9 @@ namespace plane::input
         float rollDelta = 0.0f;
         
         if (glfwGetKey(window, bindings.pitchUp) == GLFW_PRESS)
-            pitchDelta += kRotationSpeed * timingState.deltaTime;
+            pitchDelta += kRotationSpeed_pitch * timingState.deltaTime;
         if (glfwGetKey(window, bindings.pitchDown) == GLFW_PRESS)
-            pitchDelta -= kRotationSpeed * timingState.deltaTime;
+            pitchDelta -= kRotationSpeed_pitch * timingState.deltaTime;
 
         if (glfwGetKey(window, bindings.rollRight) == GLFW_PRESS)
             rollDelta += kRotationSpeed * timingState.deltaTime;
