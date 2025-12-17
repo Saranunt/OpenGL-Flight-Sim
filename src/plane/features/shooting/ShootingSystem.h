@@ -2,9 +2,11 @@
 
 #include <glm/glm.hpp>
 
+#include <memory>
 #include <vector>
 
 class Shader;
+class Model;
 
 namespace plane
 {
@@ -48,8 +50,7 @@ namespace plane::features::shooting
         bool CheckBulletPlaneCollision(const Bullet& bullet, const core::PlaneState& planeState) const;
 
         std::vector<Bullet> bullets_;
-        unsigned int bulletVao_ { 0 };
-        unsigned int bulletVbo_ { 0 };
+        std::unique_ptr<Model> bulletModel_;
     };
 }
 

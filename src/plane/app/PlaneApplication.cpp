@@ -3,6 +3,7 @@
 #include <glad/glad.h>
 
 #include <stb_image.h>
+#include <learnopengl/filesystem.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -41,24 +42,39 @@ namespace plane::app
             timingState_.deltaTime = currentFrame - timingState_.lastFrame;
             timingState_.lastFrame = currentFrame;
 
-            for (std::size_t i = 0; i < players_.size(); ++i)
+            // Handle input based on game state
+            if (gameState_ == core::GameState::StartMenu)
             {
-                auto& player = players_[i];
-                inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i]);
-
-                // Fire bullets at a rate-limited cadence while the fire key is held.
-                player.fireCooldown = std::max(0.0f, player.fireCooldown - timingState_.deltaTime);
-                int fireKeyState = glfwGetKey(window_, inputBindings_[i].fire);
-                bool firePressed = (fireKeyState == GLFW_PRESS);
-                if (firePressed && player.fireCooldown <= 0.0f)
+                // Check for spacebar press to start game
+                int spaceState = glfwGetKey(window_, GLFW_KEY_SPACE);
+                if (spaceState == GLFW_PRESS && !spacePressed_)
                 {
-                    shootingSystem_.FireBullet(player.state);
-                    player.fireCooldown = (player.fireRatePerSec > 0.0f) ? (1.0f / player.fireRatePerSec) : 0.0f;
+                    gameState_ = core::GameState::Playing;
+                    spacePressed_ = true;
                 }
-
-                planeController_.UpdateFlightDynamics(player.state, timingState_.deltaTime);
-                collisionSystem_.CheckAndResolveCollisions(player.state, timingState_.deltaTime);
-                player.cameraController.Update(player.state, player.cameraRig);
+                else if (spaceState == GLFW_RELEASE)
+                {
+                    spacePressed_ = false;
+                }
+            }
+            else if (gameState_ == core::GameState::Playing)
+            {
+                Update();
+                CheckGameOver();
+            }
+            else if (gameState_ == core::GameState::GameOver)
+            {
+                // Check for spacebar press to restart game
+                int spaceState = glfwGetKey(window_, GLFW_KEY_SPACE);
+                if (spaceState == GLFW_PRESS && !spacePressed_)
+                {
+                    RestartGame();
+                    spacePressed_ = true;
+                }
+                else if (spaceState == GLFW_RELEASE)
+                {
+                    spacePressed_ = false;
+                }
             }
 
             Render();
@@ -68,11 +84,42 @@ namespace plane::app
         }
     }
 
+    void PlaneApplication::Update()
+    {
+        for (std::size_t i = 0; i < players_.size(); ++i)
+        {
+            auto& player = players_[i];
+            inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i]);
+
+            // Fire bullets at a rate-limited cadence while the fire key is held.
+            player.fireCooldown = std::max(0.0f, player.fireCooldown - timingState_.deltaTime);
+            int fireKeyState = glfwGetKey(window_, inputBindings_[i].fire);
+            bool firePressed = (fireKeyState == GLFW_PRESS);
+            if (firePressed && player.fireCooldown <= 0.0f)
+            {
+                shootingSystem_.FireBullet(player.state);
+                player.fireCooldown = (player.fireRatePerSec > 0.0f) ? (1.0f / player.fireRatePerSec) : 0.0f;
+            }
+
+            planeController_.UpdateFlightDynamics(player.state, timingState_.deltaTime);
+            collisionSystem_.CheckAndResolveCollisions(player.state, timingState_.deltaTime);
+            player.cameraController.Update(player.state, player.cameraRig);
+        }
+
+        // Update game systems
+        shootingSystem_.Update(timingState_.deltaTime, players_[0].state);
+        shootingSystem_.Update(timingState_.deltaTime, players_[1].state);
+        skeletalAnimationSystem_.Update(timingState_.deltaTime);
+        movementSystem_.Update(timingState_.deltaTime);
+        multiplayerManager_.Update(timingState_.deltaTime);
+    }
+
     void PlaneApplication::Shutdown()
     {
         groundPlane_.Shutdown();
         terrainPlane_.Shutdown();
         healthBarRenderer_.Shutdown();
+        startMenuRenderer_.Shutdown();
         shadowMap_.Shutdown();
         glfwTerminate();
     }
@@ -131,7 +178,7 @@ namespace plane::app
 
         islandManager_.GenerateIslands();
         groundPlane_.Initialize(FileSystem::getPath("resources/textures/wave2.jpg"));
-        terrainPlane_.Initialize(FileSystem::getPath("resources/objects/island4/island_baseColor.jpeg"), 2000.0f, 100);
+        terrainPlane_.Initialize(FileSystem::getPath("resources/objects/island4/island_baseColor.jpeg"), 3000.0f, 250);  // 5x size, 2.5x grid resolution
         if (!shadowMap_.Initialize(2048, 2048))
         {
             std::cout << "Failed to initialize shadow map resources." << std::endl;
@@ -142,6 +189,7 @@ namespace plane::app
         movementSystem_.Initialize();
         multiplayerManager_.Initialize();
         healthBarRenderer_.Initialize();
+        startMenuRenderer_.Initialize(FileSystem::getPath("resources/startmenu.jpg"));
         collisionSystem_.Initialize(islandManager_, &terrainPlane_);
     }
 
@@ -171,6 +219,90 @@ namespace plane::app
 
     void PlaneApplication::Render()
     {
+        if (gameState_ == core::GameState::StartMenu)
+        {
+            RenderStartMenu();
+        }
+        else if (gameState_ == core::GameState::Playing)
+        {
+            RenderGameplay();
+        }
+        else if (gameState_ == core::GameState::GameOver)
+        {
+            RenderGameOver();
+        }
+    }
+
+    void PlaneApplication::RenderStartMenu()
+    {
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        startMenuRenderer_.Render(core::AppConfig::ScreenWidth, core::AppConfig::ScreenHeight);
+    }
+
+    void PlaneApplication::RenderGameOver()
+    {
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        // Use start menu image as mockup for game over screen
+        startMenuRenderer_.Render(core::AppConfig::ScreenWidth, core::AppConfig::ScreenHeight);
+    }
+
+    void PlaneApplication::CheckGameOver()
+    {
+        // Check if any player has died
+        for (const auto& player : players_)
+        {
+            if (!player.state.isAlive)
+            {
+                gameState_ = core::GameState::GameOver;
+                break;
+            }
+        }
+    }
+
+    void PlaneApplication::RestartGame()
+    {
+        // Reset player 1
+        players_[0].state.position = glm::vec3(100.0f, 26.0f, 0.0f);
+        players_[0].state.pitch = 0.0f;
+        players_[0].state.yaw = 0.0f;
+        players_[0].state.roll = 0.0f;
+        players_[0].state.speed = 5.0f;
+        players_[0].state.health = 100.0f;
+        players_[0].state.isAlive = true;
+        players_[0].fireCooldown = 0.0f;
+        
+        // Reset player 2
+        players_[1].state.position = glm::vec3(-100.0f, 26.0f, 0.0f);
+        players_[1].state.pitch = 0.0f;
+        players_[1].state.yaw = 0.0f;
+        players_[1].state.roll = 0.0f;
+        players_[1].state.speed = 5.0f;
+        players_[1].state.health = 100.0f;
+        players_[1].state.isAlive = true;
+        players_[1].fireCooldown = 0.0f;
+        
+        // Reset camera positions
+        for (auto& player : players_)
+        {
+            player.cameraRig.camera.Position = player.state.position + glm::vec3(0.0f, 1.0f, -12.0f);
+            player.cameraRig.camera.Front = glm::normalize(player.state.position - player.cameraRig.camera.Position);
+            player.cameraRig.firstMouse = true;
+        }
+        
+        // Clear bullets by reinitializing shooting system
+        shootingSystem_ = features::shooting::ShootingSystem();
+        shootingSystem_.Initialize();
+        
+        // Reset game state
+        gameState_ = core::GameState::Playing;
+    }
+
+    void PlaneApplication::RenderGameplay()
+    {
         // First render depth from the sun's perspective so the main pass can shadow.
         glm::mat4 lightSpaceMatrix = CalculateLightSpaceMatrix();
         RenderDepthPass(lightSpaceMatrix);
@@ -196,6 +328,28 @@ namespace plane::app
             glm::mat4 view = players_[i].cameraRig.camera.GetViewMatrix();
 
             RenderColorPass(projection, view, lightSpaceMatrix, players_[i].cameraRig);
+            
+            // Render player's own health bar as a camera-anchored billboard
+            const auto& cam = players_[i].cameraRig.camera;
+            healthBarRenderer_.RenderPlayerHealthBillboard(
+                players_[i].state,
+                projection,
+                view,
+                cam.Position,
+                cam.Front,
+                cam.Up);
+
+            // Render aiming reticle in front of the camera
+            healthBarRenderer_.RenderAimingReticle(
+                projection,
+                view,
+                cam.Position,
+                cam.Front,
+                cam.Up);
+            
+            // Render enemy health bar above enemy plane
+            size_t enemyIdx = (i == 0) ? 1 : 0;
+            healthBarRenderer_.RenderEnemyHealthBar(players_[enemyIdx].state, projection, view, players_[i].cameraRig.camera.Position);
         }
 
         // Draw a simple vertical divider between the two viewports.
@@ -206,13 +360,6 @@ namespace plane::app
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         glDisable(GL_SCISSOR_TEST);
-
-        // Feature placeholders still receive deltaTime so they remain pluggable.
-        shootingSystem_.Update(timingState_.deltaTime, players_[0].state);
-        shootingSystem_.Update(timingState_.deltaTime, players_[1].state);
-        skeletalAnimationSystem_.Update(timingState_.deltaTime);
-        movementSystem_.Update(timingState_.deltaTime);
-        multiplayerManager_.Update(timingState_.deltaTime);
     }
 
     void PlaneApplication::FramebufferCallback(GLFWwindow* window, int width, int height)
@@ -277,9 +424,6 @@ namespace plane::app
 
         // Draw bullets after the main geometry so they appear on top.
         shootingSystem_.Render(*shader_);
-        
-        // Draw health bar above the plane
-        // healthBarRenderer_.RenderHealthBar( player.state , player.cameraRig, projection, view, *shader_);
 
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, 0);

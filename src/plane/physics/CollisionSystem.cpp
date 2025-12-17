@@ -55,12 +55,18 @@ namespace plane::physics
             // Collision detected - push plane up to safe height.
             planeState.position.y = minSafeY;
             
-            // Dampen vertical velocity by reducing pitch toward level flight.
-            if (planeState.pitch < 0.0f)
+            // Reduce health by 30 on ground collision
+            planeState.health -= 0.1f;
+            if (planeState.health <= 0.0f)
             {
-                float dampedPitch = planeState.pitch * 0.5f;
-                planeState.pitch = (dampedPitch > -10.0f) ? dampedPitch : -10.0f;
+                planeState.health = 0.0f;
+                planeState.isAlive = false;
             }
+            
+            // Adjust pitch by 20 degrees away from terrain (pull up)
+            planeState.pitch += 0.0f;
+            if (planeState.pitch > 90.0f)
+                planeState.pitch = 90.0f;
             
             // Reduce speed slightly from impact.
             // TUNE: 0.95f = lose 5% speed per collision. Increase (0.98f) for less penalty.

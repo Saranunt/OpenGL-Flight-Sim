@@ -9,13 +9,15 @@ namespace plane::entities
 {
     namespace
     {
-        constexpr float kTurnRate = 0.5f; // degrees per second per degree of roll
+        constexpr float kTurnRate = 45.0f; // degrees per second at full roll (90 degrees)
     }
 
     void PlaneController::UpdateFlightDynamics(core::PlaneState& planeState, float deltaTime) const
     {
-        // Bank angle feeds into yaw, then we integrate forward velocity.
-        planeState.yaw -= planeState.roll * kTurnRate * deltaTime;
+        // Bank angle feeds into yaw using sin(roll) for realistic turning
+        // Most effective at 90 degree roll, no turn at 0 degree roll
+        float rollRad = glm::radians(planeState.roll);
+        planeState.yaw -= std::sin(rollRad) * kTurnRate * deltaTime;
         NormalizeYaw(planeState);
 
         glm::vec3 forward = CalculateForwardVector(planeState);

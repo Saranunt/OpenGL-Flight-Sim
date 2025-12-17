@@ -14,6 +14,10 @@ namespace plane::core
         float speed { 5.0f };
         float health { 100.0f };  // Health points (0-100)
         bool isAlive { true };     // Whether plane is still active
+        
+        // Input acceleration tracking
+        float pitchInputTime { 0.0f };  // Time pitch control has been held
+        float rollInputTime { 0.0f };   // Time roll control has been held
     };
 }
 

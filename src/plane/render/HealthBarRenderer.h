@@ -18,21 +18,47 @@ namespace plane::render
         void Initialize();
         void Shutdown();
         
-        // Render health bar above the plane in screen space
-        // projection and view are the camera matrices used for 3D->2D transformation
-        void RenderHealthBar(const core::PlaneState& planeState, 
-                            const core::CameraRig& cameraRig,
-                            const glm::mat4& projection,
-                            const glm::mat4& view,
-                            Shader& shader) const;
+        // Render player's own health bar at bottom of viewport (2D UI)
+        void RenderPlayerHealthBar(const core::PlaneState& playerState,
+                                   int viewportX, int viewportY,
+                                   int viewportWidth, int viewportHeight) const;
+
+        // Render player's own health bar as a camera-anchored billboard in world space
+        void RenderPlayerHealthBillboard(const core::PlaneState& playerState,
+                         const glm::mat4& projection,
+                         const glm::mat4& view,
+                         const glm::vec3& cameraPos,
+                         const glm::vec3& cameraFront,
+                         const glm::vec3& cameraUp) const;
+        
+        // Render enemy health bar above enemy plane (3D billboard)
+        void RenderEnemyHealthBar(const core::PlaneState& enemyState,
+                                 const glm::mat4& projection,
+                                 const glm::mat4& view,
+                                 const glm::vec3& cameraPos) const;
+
+        // Render a simple camera-anchored aiming reticle
+        void RenderAimingReticle(const glm::mat4& projection,
+                     const glm::mat4& view,
+                     const glm::vec3& cameraPos,
+                     const glm::vec3& cameraFront,
+                     const glm::vec3& cameraUp) const;
 
     private:
         unsigned int barVao_ { 0 };
         unsigned int barVbo_ { 0 };
+        unsigned int uiShaderProgram_ { 0 };
+        unsigned int billboardShaderProgram_ { 0 };
+        
+        void CreateShaders();
         
         // Constants for health bar appearance
-        static constexpr float BAR_WIDTH = 0.1f;      // World space width
-        static constexpr float BAR_HEIGHT = 0.02f;    // World space height
-        static constexpr float BAR_OFFSET_Y = 5.0f;   // Height above plane
+        static constexpr float UI_BAR_WIDTH = 200.0f;    // Screen pixels
+        static constexpr float UI_BAR_HEIGHT = 20.0f;    // Screen pixels
+        static constexpr float UI_BAR_MARGIN = 20.0f;    // From bottom of screen
+        
+        static constexpr float BILLBOARD_WIDTH = 3.0f;   // World units
+        static constexpr float BILLBOARD_HEIGHT = 0.4f;  // World units
+        static constexpr float BILLBOARD_OFFSET_Y = 5.0f; // Above plane
     };
 }
