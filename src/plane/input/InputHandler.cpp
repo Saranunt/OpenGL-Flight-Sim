@@ -60,8 +60,8 @@ namespace plane::input
         // while (planeState.roll < 0.0f) planeState.roll += 360.0f;
         // while (planeState.roll >= 360.0f) planeState.roll -= 360.0f;
 
-        if (planeState.roll > 90.0f) planeState.roll = 90.0f;
-        if (planeState.roll < -90.0f) planeState.roll = -90.0f;
+        // if (planeState.roll > 90.0f) planeState.roll = 90.0f;
+        // if (planeState.roll < -90.0f) planeState.roll = -90.0f;
 
         if (glfwGetKey(window, bindings.throttleUp) == GLFW_PRESS)
             planeState.speed += kAcceleration * timingState.deltaTime;
