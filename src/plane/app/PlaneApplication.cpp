@@ -89,11 +89,11 @@ namespace plane::app
         for (std::size_t i = 0; i < players_.size(); ++i)
         {
             auto& player = players_[i];
-            inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i]);
+            inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i], plane_.get());
             boosterSystem_.Update(player.state, timingState_.deltaTime);
 
             // Fire bullets at a rate-limited cadence while the fire key is held.
-            player.fireCooldown = std::max(0.0f, player.fireCooldown - timingState_.deltaTime);
+            player.fireCooldown = (std::max)(0.0f, player.fireCooldown - timingState_.deltaTime);
             int fireKeyState = glfwGetKey(window_, inputBindings_[i].fire);
             bool firePressed = (fireKeyState == GLFW_PRESS);
             if (firePressed && player.fireCooldown <= 0.0f)
@@ -176,7 +176,13 @@ namespace plane::app
         InitializePlayers();
         shader_ = std::make_unique<Shader>("plane.vs", "plane.fs");
         shadowShader_ = std::make_unique<Shader>("shadow_depth.vs", "shadow_depth.fs");
-        planeModel_ = std::make_unique<Model>(FileSystem::getPath("resources/objects/plane/plane.dae"));
+
+        plane_ = std::make_unique<Plane>();
+        if (!plane_->LoadModels())
+        {
+            std::cout << "Failed to load one or more plane parts from plane2/ folder" << std::endl;
+        }
+
         islandModel_ = std::make_unique<Model>(FileSystem::getPath("resources/objects/island4/Untitled.dae"));
 
         islandManager_.GenerateIslands();
@@ -464,8 +470,8 @@ namespace plane::app
         terrainPlane_.Draw(shader, bindTextures);  // Use heightmap terrain instead of island models
         for (const auto& player : players_)
         {   
-            if (player.state.isAlive)
-            planeRenderer_.Draw(*planeModel_, shader, player.state);
+            if (player.state.isAlive && plane_)
+                planeRenderer_.Draw(*plane_, shader, player.state);
         }
     }
 
@@ -474,7 +480,7 @@ namespace plane::app
         // Build an orthographic frustum that follows both planes, emulating sun light.
         glm::vec3 lightDir = glm::normalize(lightDirection_);
         glm::vec3 center = 0.5f * (players_[0].state.position + players_[1].state.position);
-        float radius = std::max(
+        float radius = (std::max)(
             glm::length(players_[0].state.position - center),
             glm::length(players_[1].state.position - center)
         );

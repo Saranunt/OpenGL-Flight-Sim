@@ -94,7 +94,7 @@ namespace plane::render
 
     void BoostTrailRenderer::UpdateForPlane(const core::PlaneState &planeState, float deltaTime, std::size_t planeIndex)
     {
-        const float dt = std::max(0.0f, deltaTime);
+        const float dt = (std::max)(0.0f, deltaTime);
         auto &particles = particles_[planeIndex % particles_.size()];
 
         for (auto &p : particles)
@@ -142,7 +142,7 @@ namespace plane::render
                 float vertical = (NextFloat01(planeIndex) - 0.5f) * 0.4f;
                 p.position = baseSpawn + right * side + up * vertical;
 
-                float speed = std::max(20.0f, planeState.speed);
+                float speed = (std::max)(20.0f, planeState.speed);
                 glm::vec3 jitter = right * ((NextFloat01(planeIndex) - 0.5f) * 3.0f) + up * (NextFloat01(planeIndex) * 1.5f);
                 p.velocity = (-forward * (speed * 0.6f)) + jitter;
 
@@ -181,9 +181,9 @@ namespace plane::render
                     break;
                 }
 
-                float alpha = std::clamp(p.remaining / std::max(0.001f, p.lifetime), 0.0f, 1.0f);
+                float alpha = (std::clamp)(p.remaining / (std::max)(0.001f, p.lifetime), 0.0f, 1.0f);
                 // Fade in quickly, then fade out.
-                alpha = std::min(1.0f, alpha * 1.6f);
+                alpha = (std::min)(1.0f, alpha * 1.6f);
 
                 GpuParticle gp;
                 gp.position = p.position;

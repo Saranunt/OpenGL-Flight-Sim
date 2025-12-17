@@ -13,8 +13,8 @@ namespace plane::core
     {
         float ExponentialApproach(float current, float target, float deltaTime, float timeConstantSeconds)
         {
-            const float safeDt = std::max(0.0f, deltaTime);
-            const float tau = std::max(0.001f, timeConstantSeconds);
+            const float safeDt = (std::max)(0.0f, deltaTime);
+            const float tau = (std::max)(0.001f, timeConstantSeconds);
             const float alpha = 1.0f - std::exp(-safeDt / tau);
             return current + (target - current) * alpha;
         }
