@@ -31,6 +31,7 @@
 #include "render/StartMenuRenderer.h"
 #include "render/TerrainPlane.h"
 #include "world/IslandManager.h"
+#include "Plane.h"
 
 namespace plane::app
 {
@@ -79,7 +80,7 @@ namespace plane::app
 
         GLFWwindow* window_ { nullptr };
         std::unique_ptr<Shader> shader_;
-        std::unique_ptr<Model> planeModel_;
+        std::unique_ptr<Plane> plane_;
         std::unique_ptr<Model> islandModel_;
         std::unique_ptr<Shader> shadowShader_;
 

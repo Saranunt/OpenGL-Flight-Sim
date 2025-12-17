@@ -89,7 +89,7 @@ namespace plane::app
         for (std::size_t i = 0; i < players_.size(); ++i)
         {
             auto& player = players_[i];
-            inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i]);
+            inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i], plane_.get());
 
             // Fire bullets at a rate-limited cadence while the fire key is held.
             player.fireCooldown = std::max(0.0f, player.fireCooldown - timingState_.deltaTime);
@@ -173,7 +173,13 @@ namespace plane::app
         InitializePlayers();
         shader_ = std::make_unique<Shader>("plane.vs", "plane.fs");
         shadowShader_ = std::make_unique<Shader>("shadow_depth.vs", "shadow_depth.fs");
-        planeModel_ = std::make_unique<Model>(FileSystem::getPath("resources/objects/plane/plane.dae"));
+
+        plane_ = std::make_unique<Plane>();
+        if (!plane_->LoadModels())
+        {
+            std::cout << "Failed to load one or more plane parts from plane2/ folder" << std::endl;
+        }
+
         islandModel_ = std::make_unique<Model>(FileSystem::getPath("resources/objects/island4/Untitled.dae"));
 
         islandManager_.GenerateIslands();
@@ -434,8 +440,8 @@ namespace plane::app
         terrainPlane_.Draw(shader, bindTextures);  // Use heightmap terrain instead of island models
         for (const auto& player : players_)
         {   
-            if (player.state.isAlive)
-            planeRenderer_.Draw(*planeModel_, shader, player.state);
+            if (player.state.isAlive && plane_)
+                planeRenderer_.Draw(*plane_, shader, player.state);
         }
     }
 

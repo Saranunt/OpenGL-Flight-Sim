@@ -1,4 +1,5 @@
 #include "InputHandler.h"
+#include "../app/Plane.h"
 #include <glm/glm.hpp>
 #include <cmath>
 
@@ -13,7 +14,7 @@ namespace plane::input
         constexpr float kAcceleration = 15.0f;  // units per second^2
     }
 
-    void InputHandler::ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings) const
+    void InputHandler::ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings, plane::app::Plane* plane) const
     {
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         {
@@ -104,6 +105,37 @@ namespace plane::input
 
         if (planeState.speed < 25.0f) planeState.speed = 25.0f;
         if (planeState.speed > 50.0f) planeState.speed = 50.0f;
+
+        // Optional per-part transforms when a plane pointer is provided.
+        if (plane)
+        {
+            // Simple demo controls:
+            //   I/K : flap left up/down
+            //   O/L : flap right up/down
+            //   J ; tail yaw left/right
+            //   U : spin blade
+            const float flapStep = glm::radians(20.0f) * timingState.deltaTime;
+            const float tailStep = glm::radians(15.0f) * timingState.deltaTime;
+            const float bladeStep = glm::radians(360.0f) * timingState.deltaTime * 2.0f;
+
+            if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS)
+                plane->RotatePart(plane::app::Plane::Part::FlapL, glm::vec3(1.0f, 0.0f, 0.0f), flapStep);
+            if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
+                plane->RotatePart(plane::app::Plane::Part::FlapL, glm::vec3(1.0f, 0.0f, 0.0f), -flapStep);
+
+            if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS)
+                plane->RotatePart(plane::app::Plane::Part::FlapR, glm::vec3(1.0f, 0.0f, 0.0f), flapStep);
+            if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
+                plane->RotatePart(plane::app::Plane::Part::FlapR, glm::vec3(1.0f, 0.0f, 0.0f), -flapStep);
+
+            if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
+                plane->RotatePart(plane::app::Plane::Part::Tail, glm::vec3(1.0f, 0.0f, 0.0f), tailStep);
+            if (glfwGetKey(window, GLFW_KEY_SEMICOLON) == GLFW_PRESS)
+                plane->RotatePart(plane::app::Plane::Part::Tail, glm::vec3(1.0f, 0.0f, 0.0f), -tailStep);
+                
+        }
+        const float bladeStep = glm::radians(360.0f) * timingState.deltaTime * 1.5f;
+        plane->RotatePart(plane::app::Plane::Part::Blade, glm::vec3(0.0f, 0.0f, 1.0f), bladeStep);
     }
 
     void InputHandler::OnMouseMove(double xposIn, double yposIn, core::CameraRig& cameraRig) const
