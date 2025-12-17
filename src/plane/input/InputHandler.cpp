@@ -6,8 +6,10 @@ namespace plane::input
 {
     namespace
     {
-        constexpr float kRotationSpeed = 40.0f; // degrees per second
-        constexpr float kRotationSpeed_pitch = 20.0f; // degrees per second
+        constexpr float kMinRotationSpeed = 10.0f;  // Starting speed
+        constexpr float kMaxRotationSpeed = 80.0f;  // Maximum speed for roll
+        constexpr float kMaxRotationSpeed_pitch = 40.0f;  // Maximum speed for pitch
+        constexpr float kRotationAccelTime = 1.5f;  // Time to reach max speed (seconds)
         constexpr float kAcceleration = 15.0f;  // units per second^2
     }
 
@@ -24,15 +26,47 @@ namespace plane::input
         float yawDelta = 0.0f;
         float rollDelta = 0.0f;
         
+        // Track pitch input and calculate speed
+        bool pitchInputActive = false;
         if (glfwGetKey(window, bindings.pitchUp) == GLFW_PRESS)
-            pitchDelta += kRotationSpeed_pitch * timingState.deltaTime;
+        {
+            pitchInputActive = true;
+            planeState.pitchInputTime += timingState.deltaTime;
+            float t = glm::clamp(planeState.pitchInputTime / kRotationAccelTime, 0.0f, 1.0f);
+            float currentSpeed = glm::mix(kMinRotationSpeed, kMaxRotationSpeed_pitch, t);
+            pitchDelta += currentSpeed * timingState.deltaTime;
+        }
         if (glfwGetKey(window, bindings.pitchDown) == GLFW_PRESS)
-            pitchDelta -= kRotationSpeed_pitch * timingState.deltaTime;
+        {
+            pitchInputActive = true;
+            planeState.pitchInputTime += timingState.deltaTime;
+            float t = glm::clamp(planeState.pitchInputTime / kRotationAccelTime, 0.0f, 1.0f);
+            float currentSpeed = glm::mix(kMinRotationSpeed, kMaxRotationSpeed_pitch, t);
+            pitchDelta -= currentSpeed * timingState.deltaTime;
+        }
+        if (!pitchInputActive)
+            planeState.pitchInputTime = 0.0f;
 
+        // Track roll input and calculate speed
+        bool rollInputActive = false;
         if (glfwGetKey(window, bindings.rollRight) == GLFW_PRESS)
-            rollDelta += kRotationSpeed * timingState.deltaTime;
+        {
+            rollInputActive = true;
+            planeState.rollInputTime += timingState.deltaTime;
+            float t = glm::clamp(planeState.rollInputTime / kRotationAccelTime, 0.0f, 1.0f);
+            float currentSpeed = glm::mix(kMinRotationSpeed, kMaxRotationSpeed, t);
+            rollDelta += currentSpeed * timingState.deltaTime;
+        }
         if (glfwGetKey(window, bindings.rollLeft) == GLFW_PRESS)
-            rollDelta -= kRotationSpeed * timingState.deltaTime;
+        {
+            rollInputActive = true;
+            planeState.rollInputTime += timingState.deltaTime;
+            float t = glm::clamp(planeState.rollInputTime / kRotationAccelTime, 0.0f, 1.0f);
+            float currentSpeed = glm::mix(kMinRotationSpeed, kMaxRotationSpeed, t);
+            rollDelta -= currentSpeed * timingState.deltaTime;
+        }
+        if (!rollInputActive)
+            planeState.rollInputTime = 0.0f;
 
         // Apply roll directly
         planeState.roll += rollDelta;
