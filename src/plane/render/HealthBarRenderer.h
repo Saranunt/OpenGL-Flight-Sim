@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include <learnopengl/shader_m.h>
 
 class Shader;
 
@@ -30,6 +31,14 @@ namespace plane::render
                          const glm::vec3& cameraPos,
                          const glm::vec3& cameraFront,
                          const glm::vec3& cameraUp) const;
+
+        // Render player's booster fuel bar under the health billboard.
+        void RenderPlayerBoosterBillboard(const core::PlaneState& playerState,
+                         const glm::mat4& projection,
+                         const glm::mat4& view,
+                         const glm::vec3& cameraPos,
+                         const glm::vec3& cameraFront,
+                         const glm::vec3& cameraUp) const;
         
         // Render enemy health bar above enemy plane (3D billboard)
         void RenderEnemyHealthBar(const core::PlaneState& enemyState,
@@ -45,8 +54,8 @@ namespace plane::render
     private:
         unsigned int barVao_ { 0 };
         unsigned int barVbo_ { 0 };
-        unsigned int uiShaderProgram_ { 0 };
-        unsigned int billboardShaderProgram_ { 0 };
+        std::unique_ptr<Shader> uiShaderProgram_;
+        std::unique_ptr<Shader> billboardShaderProgram_;
         
         void CreateShaders();
         
