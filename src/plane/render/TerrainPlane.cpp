@@ -198,7 +198,7 @@ namespace plane::render
 
                 // Multi-octave Perlin-like noise for natural terrain
                 float height = 0.0f;
-                float amplitude = 60.0f;  // INCREASED: Max height variation 
+                float amplitude = 150.0f;  // INCREASED: Max height variation 
                 float frequency = 2.5f;   // Slightly lower frequency for larger features
 
                 // Layer multiple noise octaves for more varied terrain

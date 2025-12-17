@@ -22,6 +22,14 @@ namespace plane::render
         void RenderPlayerHealthBar(const core::PlaneState& playerState,
                                    int viewportX, int viewportY,
                                    int viewportWidth, int viewportHeight) const;
+
+        // Render player's own health bar as a camera-anchored billboard in world space
+        void RenderPlayerHealthBillboard(const core::PlaneState& playerState,
+                         const glm::mat4& projection,
+                         const glm::mat4& view,
+                         const glm::vec3& cameraPos,
+                         const glm::vec3& cameraFront,
+                         const glm::vec3& cameraUp) const;
         
         // Render enemy health bar above enemy plane (3D billboard)
         void RenderEnemyHealthBar(const core::PlaneState& enemyState,

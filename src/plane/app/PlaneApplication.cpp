@@ -178,7 +178,7 @@ namespace plane::app
 
         islandManager_.GenerateIslands();
         groundPlane_.Initialize(FileSystem::getPath("resources/textures/wave2.jpg"));
-        terrainPlane_.Initialize(FileSystem::getPath("resources/objects/island4/island_baseColor.jpeg"), 2000.0f, 100);
+        terrainPlane_.Initialize(FileSystem::getPath("resources/objects/island4/island_baseColor.jpeg"), 3000.0f, 250);  // 5x size, 2.5x grid resolution
         if (!shadowMap_.Initialize(2048, 2048))
         {
             std::cout << "Failed to initialize shadow map resources." << std::endl;
@@ -329,12 +329,15 @@ namespace plane::app
 
             RenderColorPass(projection, view, lightSpaceMatrix, players_[i].cameraRig);
             
-            // Render player's own health bar at bottom of viewport
-            int vpX = static_cast<int>(i * halfWidth);
-            int vpY = 0;
-            int vpWidth = static_cast<int>(halfWidth);
-            int vpHeight = static_cast<int>(height);
-            healthBarRenderer_.RenderPlayerHealthBar(players_[i].state, vpX, vpY, vpWidth, vpHeight);
+            // Render player's own health bar as a camera-anchored billboard
+            const auto& cam = players_[i].cameraRig.camera;
+            healthBarRenderer_.RenderPlayerHealthBillboard(
+                players_[i].state,
+                projection,
+                view,
+                cam.Position,
+                cam.Front,
+                cam.Up);
             
             // Render enemy health bar above enemy plane
             size_t enemyIdx = (i == 0) ? 1 : 0;

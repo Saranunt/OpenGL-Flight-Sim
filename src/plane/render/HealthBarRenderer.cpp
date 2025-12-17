@@ -248,4 +248,51 @@ namespace plane::render
         glEnable(GL_DEPTH_TEST);
         glBindVertexArray(0);
     }
+    
+    void HealthBarRenderer::RenderPlayerHealthBillboard(const core::PlaneState& playerState,
+                                                        const glm::mat4& projection,
+                                                        const glm::mat4& view,
+                                                        const glm::vec3& cameraPos,
+                                                        const glm::vec3& cameraFront,
+                                                        const glm::vec3& cameraUp) const
+    {
+        if (!playerState.isAlive || barVao_ == 0 || billboardShaderProgram_ == 0)
+        {
+            return;
+        }
+
+        float healthPercent = glm::clamp(playerState.health / 100.0f, 0.0f, 1.0f);
+
+        // Position a bit in front of the camera and slightly below center
+        glm::vec3 barWorldPos = cameraPos + cameraFront * 6.0f - cameraUp * 1.5f;
+
+        // Calculate camera right vector from view matrix
+        glm::mat4 invView = glm::inverse(view);
+        glm::vec3 camRight = glm::vec3(invView[0]);
+        glm::vec3 camUp = glm::vec3(invView[1]);
+
+        glUseProgram(billboardShaderProgram_);
+        glBindVertexArray(barVao_);
+        glDisable(GL_DEPTH_TEST);
+
+        // Background
+        glUniformMatrix4fv(glGetUniformLocation(billboardShaderProgram_, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+        glUniformMatrix4fv(glGetUniformLocation(billboardShaderProgram_, "view"), 1, GL_FALSE, glm::value_ptr(view));
+        glUniform3fv(glGetUniformLocation(billboardShaderProgram_, "worldPos"), 1, glm::value_ptr(barWorldPos));
+        glUniform3fv(glGetUniformLocation(billboardShaderProgram_, "cameraRight"), 1, glm::value_ptr(camRight));
+        glUniform3fv(glGetUniformLocation(billboardShaderProgram_, "cameraUp"), 1, glm::value_ptr(camUp));
+        // Player bar is slimmer (height scaled to 25%)
+        const float playerBarHeight = BILLBOARD_HEIGHT * 0.25f;
+        glUniform2f(glGetUniformLocation(billboardShaderProgram_, "scale"), BILLBOARD_WIDTH, playerBarHeight);
+        glUniform3f(glGetUniformLocation(billboardShaderProgram_, "color"), 0.5f, 0.0f, 0.0f);
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+        // Health fill
+        glUniform2f(glGetUniformLocation(billboardShaderProgram_, "scale"), BILLBOARD_WIDTH * healthPercent, playerBarHeight);
+        glUniform3f(glGetUniformLocation(billboardShaderProgram_, "color"), 0.0f, 1.0f, 0.0f);
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+        glEnable(GL_DEPTH_TEST);
+        glBindVertexArray(0);
+    }
 }

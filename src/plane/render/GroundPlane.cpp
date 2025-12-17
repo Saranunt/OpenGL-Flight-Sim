@@ -9,7 +9,7 @@ namespace plane::render
     namespace
     {
         constexpr float kTileRepeat = 50.0f;
-        constexpr float kGroundSize = 1000.0f;
+        constexpr float kGroundSize = 1500.0f;  // 5x larger
     }
 
     bool GroundPlane::Initialize(const std::string& texturePath)
