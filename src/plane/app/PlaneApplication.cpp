@@ -338,6 +338,14 @@ namespace plane::app
                 cam.Position,
                 cam.Front,
                 cam.Up);
+
+            // Render aiming reticle in front of the camera
+            healthBarRenderer_.RenderAimingReticle(
+                projection,
+                view,
+                cam.Position,
+                cam.Front,
+                cam.Up);
             
             // Render enemy health bar above enemy plane
             size_t enemyIdx = (i == 0) ? 1 : 0;

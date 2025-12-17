@@ -295,4 +295,41 @@ namespace plane::render
         glEnable(GL_DEPTH_TEST);
         glBindVertexArray(0);
     }
+
+    void HealthBarRenderer::RenderAimingReticle(const glm::mat4& projection,
+                                                const glm::mat4& view,
+                                                const glm::vec3& cameraPos,
+                                                const glm::vec3& cameraFront,
+                                                const glm::vec3& cameraUp) const
+    {
+        if (barVao_ == 0 || billboardShaderProgram_ == 0)
+        {
+            return;
+        }
+
+        // Position reticle a short distance in front of camera and slightly above center
+        glm::vec3 reticlePos = cameraPos + cameraFront * 8.0f + cameraUp * 0.6f;
+
+        glm::mat4 invView = glm::inverse(view);
+        glm::vec3 camRight = glm::vec3(invView[0]);
+        glm::vec3 camUp = glm::vec3(invView[1]);
+
+        glUseProgram(billboardShaderProgram_);
+        glBindVertexArray(barVao_);
+        glDisable(GL_DEPTH_TEST);
+
+        // Small square reticle (shrunk to 1/4 size)
+        const float reticleSize = 0.05f;
+        glUniformMatrix4fv(glGetUniformLocation(billboardShaderProgram_, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+        glUniformMatrix4fv(glGetUniformLocation(billboardShaderProgram_, "view"), 1, GL_FALSE, glm::value_ptr(view));
+        glUniform3fv(glGetUniformLocation(billboardShaderProgram_, "worldPos"), 1, glm::value_ptr(reticlePos));
+        glUniform3fv(glGetUniformLocation(billboardShaderProgram_, "cameraRight"), 1, glm::value_ptr(camRight));
+        glUniform3fv(glGetUniformLocation(billboardShaderProgram_, "cameraUp"), 1, glm::value_ptr(camUp));
+        glUniform2f(glGetUniformLocation(billboardShaderProgram_, "scale"), reticleSize, reticleSize);
+        glUniform3f(glGetUniformLocation(billboardShaderProgram_, "color"), 1.0f, 0.0f, 0.0f);
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+        glEnable(GL_DEPTH_TEST);
+        glBindVertexArray(0);
+    }
 }

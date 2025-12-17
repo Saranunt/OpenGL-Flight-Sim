@@ -37,6 +37,13 @@ namespace plane::render
                                  const glm::mat4& view,
                                  const glm::vec3& cameraPos) const;
 
+        // Render a simple camera-anchored aiming reticle
+        void RenderAimingReticle(const glm::mat4& projection,
+                     const glm::mat4& view,
+                     const glm::vec3& cameraPos,
+                     const glm::vec3& cameraFront,
+                     const glm::vec3& cameraUp) const;
+
     private:
         unsigned int barVao_ { 0 };
         unsigned int barVbo_ { 0 };
