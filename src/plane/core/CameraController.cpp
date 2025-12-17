@@ -9,11 +9,38 @@
 
 namespace plane::core
 {
+    namespace
+    {
+        float ExponentialApproach(float current, float target, float deltaTime, float timeConstantSeconds)
+        {
+            const float safeDt = (std::max)(0.0f, deltaTime);
+            const float tau = (std::max)(0.001f, timeConstantSeconds);
+            const float alpha = 1.0f - std::exp(-safeDt / tau);
+            return current + (target - current) * alpha;
+        }
+    }
+
     void CameraController::Update(const PlaneState& planeState, CameraRig& cameraRig) const
+    {
+        // Legacy overload kept for compatibility with older call sites.
+        // Uses deltaTime=0 so boost zoom-out is effectively disabled (no time-based smoothing).
+        Update(planeState, cameraRig, 0.0f);
+    }
+
+    void CameraController::Update(const PlaneState& planeState, CameraRig& cameraRig, float deltaTime) const
     {
         // Camera follows plane's orientation (yaw, pitch, roll) to make plane appear static.
         constexpr float cameraDistance = 12.0f;
+        constexpr float boostExtraDistance = 3.0f;
+        constexpr float boostRampSeconds = 0.20f;
         constexpr float cameraHeight = 1.0f;
+
+        const float targetBoostOffset = (planeState.isBoosting ? boostExtraDistance : 0.0f);
+        interpolatedBoostDistanceOffset = ExponentialApproach(
+            interpolatedBoostDistanceOffset,
+            targetBoostOffset,
+            deltaTime,
+            boostRampSeconds);
 
         // Smoothly interpolate toward target orientation
         // Handle angle wrapping to prevent interpolation taking the long way around (359° -> 1°)
@@ -66,7 +93,7 @@ namespace plane::core
         // planeRotation = glm::rotate(planeRotation, rollRad, glm::vec3(0.0f, 0.0f, 1.0f));     // Roll
 
         // Camera offset in plane's local space (behind and above)
-        glm::vec3 localOffset(0.0f, cameraHeight, -cameraDistance);
+        glm::vec3 localOffset(0.0f, cameraHeight, -(cameraDistance + interpolatedBoostDistanceOffset));
         
         // Transform offset to world space using plane's rotation
         glm::vec3 worldOffset = glm::vec3(planeRotation * glm::vec4(localOffset, 0.0f));
@@ -83,4 +110,3 @@ namespace plane::core
         cameraRig.camera.Up = glm::vec3(planeRotation * glm::vec4(localUp, 0.0f));
     }
 }
-

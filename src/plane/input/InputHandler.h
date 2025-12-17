@@ -18,6 +18,7 @@ namespace plane::input
         int rollRight { GLFW_KEY_D };
         int throttleUp { GLFW_KEY_Z };
         int throttleDown { GLFW_KEY_X };
+        int boost { GLFW_KEY_LEFT_SHIFT };
         int fire { GLFW_KEY_SPACE };
     };
 

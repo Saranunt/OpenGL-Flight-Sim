@@ -20,11 +20,13 @@
 #include "entities/PlaneController.h"
 #include "features/animation/SkeletalAnimationSystem.h"
 #include "features/movement/AdvancedMovementSystem.h"
+#include "features/movement/BoosterSystem.h"
 #include "features/multiplayer/MultiplayerManager.h"
 #include "features/shooting/ShootingSystem.h"
 #include "input/InputHandler.h"
 #include "physics/CollisionSystem.h"
 #include "render/GroundPlane.h"
+#include "render/BoostTrailRenderer.h"
 #include "render/HealthBarRenderer.h"
 #include "render/PlaneRenderer.h"
 #include "render/ShadowMap.h"
@@ -87,6 +89,7 @@ namespace plane::app
         render::GroundPlane groundPlane_;
         render::TerrainPlane terrainPlane_;
         render::PlaneRenderer planeRenderer_;
+        render::BoostTrailRenderer boostTrailRenderer_;
         render::HealthBarRenderer healthBarRenderer_;
         render::StartMenuRenderer startMenuRenderer_;
         render::ShadowMap shadowMap_;
@@ -102,6 +105,7 @@ namespace plane::app
         features::shooting::ShootingSystem shootingSystem_;
         features::animation::SkeletalAnimationSystem skeletalAnimationSystem_;
         features::movement::AdvancedMovementSystem movementSystem_;
+        features::movement::BoosterSystem boosterSystem_;
         features::multiplayer::MultiplayerManager multiplayerManager_;
 
         glm::vec3 lightDirection_ { -0.3f, -1.0f, -0.3f };

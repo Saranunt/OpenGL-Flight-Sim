@@ -112,9 +112,9 @@ namespace plane::input
         // if (planeState.roll < -90.0f) planeState.roll = -90.0f;
 
         if (glfwGetKey(window, bindings.throttleUp) == GLFW_PRESS)
-            planeState.speed += kAcceleration * timingState.deltaTime;
+            planeState.baseSpeed += kAcceleration * timingState.deltaTime;
         if (glfwGetKey(window, bindings.throttleDown) == GLFW_PRESS)
-            planeState.speed -= kAcceleration * timingState.deltaTime;
+            planeState.baseSpeed -= kAcceleration * timingState.deltaTime;
 
         if (planeState.speed < 25.0f) planeState.speed = 25.0f;
         if (planeState.speed > 50.0f) planeState.speed = 50.0f;
@@ -164,6 +164,10 @@ namespace plane::input
             const float bladeStep = glm::radians(360.0f) * timingState.deltaTime * 1.5f;
             plane->RotatePart(plane::app::Plane::Part::Blade, glm::vec3(0.0f, 0.0f, 1.0f), bladeStep);
         }
+        if (planeState.baseSpeed < 25.0f) planeState.baseSpeed = 25.0f;
+        if (planeState.baseSpeed > 50.0f) planeState.baseSpeed = 50.0f;
+
+        planeState.boostHeld = (glfwGetKey(window, bindings.boost) == GLFW_PRESS);
     }
 
     void InputHandler::OnMouseMove(double xposIn, double yposIn, core::CameraRig& cameraRig) const

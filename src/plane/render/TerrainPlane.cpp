@@ -270,8 +270,8 @@ namespace plane::render
         // Bilinear interpolation
         int x0 = static_cast<int>(std::floor(gridX));
         int z0 = static_cast<int>(std::floor(gridZ));
-        int x1 = std::min(x0 + 1, gridResolution_);
-        int z1 = std::min(z0 + 1, gridResolution_);
+        int x1 = (std::min)(x0 + 1, gridResolution_);
+        int z1 = (std::min)(z0 + 1, gridResolution_);
 
         float fx = gridX - x0;
         float fz = gridZ - z0;

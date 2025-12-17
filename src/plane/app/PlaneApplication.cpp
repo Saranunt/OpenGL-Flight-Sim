@@ -90,9 +90,10 @@ namespace plane::app
         {
             auto& player = players_[i];
             inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i], plane_.get());
+            boosterSystem_.Update(player.state, timingState_.deltaTime);
 
             // Fire bullets at a rate-limited cadence while the fire key is held.
-            player.fireCooldown = std::max(0.0f, player.fireCooldown - timingState_.deltaTime);
+            player.fireCooldown = (std::max)(0.0f, player.fireCooldown - timingState_.deltaTime);
             int fireKeyState = glfwGetKey(window_, inputBindings_[i].fire);
             bool firePressed = (fireKeyState == GLFW_PRESS);
             if (firePressed && player.fireCooldown <= 0.0f)
@@ -103,7 +104,8 @@ namespace plane::app
 
             planeController_.UpdateFlightDynamics(player.state, timingState_.deltaTime);
             collisionSystem_.CheckAndResolveCollisions(player.state, timingState_.deltaTime);
-            player.cameraController.Update(player.state, player.cameraRig);
+            boostTrailRenderer_.UpdateForPlane(player.state, timingState_.deltaTime, i);
+            player.cameraController.Update(player.state, player.cameraRig, timingState_.deltaTime);
         }
 
         // Update game systems
@@ -119,6 +121,7 @@ namespace plane::app
         groundPlane_.Shutdown();
         terrainPlane_.Shutdown();
         healthBarRenderer_.Shutdown();
+        boostTrailRenderer_.Shutdown();
         startMenuRenderer_.Shutdown();
         shadowMap_.Shutdown();
         glfwTerminate();
@@ -195,6 +198,7 @@ namespace plane::app
         movementSystem_.Initialize();
         multiplayerManager_.Initialize();
         healthBarRenderer_.Initialize();
+        boostTrailRenderer_.Initialize();
         startMenuRenderer_.Initialize(FileSystem::getPath("resources/startmenu.jpg"));
         collisionSystem_.Initialize(islandManager_, &terrainPlane_);
     }
@@ -212,6 +216,7 @@ namespace plane::app
             GLFW_KEY_RIGHT,
             GLFW_KEY_RIGHT_SHIFT,
             GLFW_KEY_RIGHT_CONTROL,
+            GLFW_KEY_BACKSPACE,
             GLFW_KEY_ENTER
         };
 
@@ -276,9 +281,16 @@ namespace plane::app
         players_[0].state.pitch = 0.0f;
         players_[0].state.yaw = 0.0f;
         players_[0].state.roll = 0.0f;
-        players_[0].state.speed = 5.0f;
+        players_[0].state.baseSpeed = 25.0f;
+        players_[0].state.speed = players_[0].state.baseSpeed;
+        players_[0].state.boosterFuelSeconds = players_[0].state.boosterMaxFuelSeconds;
+        players_[0].state.boostHeld = false;
+        players_[0].state.isBoosting = false;
+        players_[0].state.boosterExhausted = false;
         players_[0].state.health = 100.0f;
         players_[0].state.isAlive = true;
+        players_[0].state.pitchInputTime = 0.0f;
+        players_[0].state.rollInputTime = 0.0f;
         players_[0].fireCooldown = 0.0f;
         
         // Reset player 2
@@ -286,9 +298,16 @@ namespace plane::app
         players_[1].state.pitch = 0.0f;
         players_[1].state.yaw = 0.0f;
         players_[1].state.roll = 0.0f;
-        players_[1].state.speed = 5.0f;
+        players_[1].state.baseSpeed = 25.0f;
+        players_[1].state.speed = players_[1].state.baseSpeed;
+        players_[1].state.boosterFuelSeconds = players_[1].state.boosterMaxFuelSeconds;
+        players_[1].state.boostHeld = false;
+        players_[1].state.isBoosting = false;
+        players_[1].state.boosterExhausted = false;
         players_[1].state.health = 100.0f;
         players_[1].state.isAlive = true;
+        players_[1].state.pitchInputTime = 0.0f;
+        players_[1].state.rollInputTime = 0.0f;
         players_[1].fireCooldown = 0.0f;
         
         // Reset camera positions
@@ -338,6 +357,14 @@ namespace plane::app
             // Render player's own health bar as a camera-anchored billboard
             const auto& cam = players_[i].cameraRig.camera;
             healthBarRenderer_.RenderPlayerHealthBillboard(
+                players_[i].state,
+                projection,
+                view,
+                cam.Position,
+                cam.Front,
+                cam.Up);
+
+            healthBarRenderer_.RenderPlayerBoosterBillboard(
                 players_[i].state,
                 projection,
                 view,
@@ -429,6 +456,9 @@ namespace plane::app
         // Draw bullets after the main geometry so they appear on top.
         shootingSystem_.Render(*shader_);
 
+        // Boost particles (trail) in world space.
+        boostTrailRenderer_.Render(projection, view);
+
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, 0);
     }
@@ -450,7 +480,7 @@ namespace plane::app
         // Build an orthographic frustum that follows both planes, emulating sun light.
         glm::vec3 lightDir = glm::normalize(lightDirection_);
         glm::vec3 center = 0.5f * (players_[0].state.position + players_[1].state.position);
-        float radius = std::max(
+        float radius = (std::max)(
             glm::length(players_[0].state.position - center),
             glm::length(players_[1].state.position - center)
         );
