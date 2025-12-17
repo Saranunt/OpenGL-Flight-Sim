@@ -296,19 +296,28 @@ namespace plane::render
         glBindVertexArray(0);
     }
 
-    void HealthBarRenderer::RenderAimingReticle(const glm::mat4& projection,
-                                                const glm::mat4& view,
-                                                const glm::vec3& cameraPos,
-                                                const glm::vec3& cameraFront,
-                                                const glm::vec3& cameraUp) const
+    void HealthBarRenderer::RenderAimingReticle(const core::PlaneState& planeState,
+                                                const glm::mat4& projection,
+                                                const glm::mat4& view) const
     {
         if (barVao_ == 0 || billboardShaderProgram_ == 0)
         {
             return;
         }
 
-        // Position reticle a short distance in front of camera and slightly above center
-        glm::vec3 reticlePos = cameraPos + cameraFront * 8.0f + cameraUp * 0.6f;
+        // Calculate plane forward vector from yaw and pitch
+        float yawRad = glm::radians(planeState.yaw);
+        float pitchRad = glm::radians(planeState.pitch);
+        glm::vec3 planeForward(
+            std::sin(yawRad) * std::cos(pitchRad),
+            -std::sin(pitchRad),
+            std::cos(yawRad) * std::cos(pitchRad)
+        );
+        planeForward = glm::normalize(planeForward);
+        
+        // Position reticle in front of plane and slightly above
+        glm::vec3 planeUp(0.0f, 1.0f, 0.0f);
+        glm::vec3 reticlePos = planeState.position + planeForward * 8.0f + planeUp * 0.6f;
 
         glm::mat4 invView = glm::inverse(view);
         glm::vec3 camRight = glm::vec3(invView[0]);
@@ -319,7 +328,7 @@ namespace plane::render
         glDisable(GL_DEPTH_TEST);
 
         // Small square reticle (shrunk to 1/4 size)
-        const float reticleSize = 0.05f;
+        const float reticleSize = 0.1f;
         glUniformMatrix4fv(glGetUniformLocation(billboardShaderProgram_, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
         glUniformMatrix4fv(glGetUniformLocation(billboardShaderProgram_, "view"), 1, GL_FALSE, glm::value_ptr(view));
         glUniform3fv(glGetUniformLocation(billboardShaderProgram_, "worldPos"), 1, glm::value_ptr(reticlePos));

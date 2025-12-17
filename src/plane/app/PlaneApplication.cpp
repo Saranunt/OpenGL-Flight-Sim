@@ -177,7 +177,7 @@ namespace plane::app
         islandModel_ = std::make_unique<Model>(FileSystem::getPath("resources/objects/island4/Untitled.dae"));
 
         islandManager_.GenerateIslands();
-        groundPlane_.Initialize(FileSystem::getPath("resources/textures/wave2.jpg"));
+        groundPlane_.Initialize(FileSystem::getPath("resources/textures/wave3.jpg"));
         terrainPlane_.Initialize(FileSystem::getPath("resources/objects/island4/island_baseColor.jpeg"), 3000.0f, 250);  // 5x size, 2.5x grid resolution
         if (!shadowMap_.Initialize(2048, 2048))
         {
@@ -339,13 +339,11 @@ namespace plane::app
                 cam.Front,
                 cam.Up);
 
-            // Render aiming reticle in front of the camera
+            // Render aiming reticle in front of the plane
             healthBarRenderer_.RenderAimingReticle(
+                players_[i].state,
                 projection,
-                view,
-                cam.Position,
-                cam.Front,
-                cam.Up);
+                view);
             
             // Render enemy health bar above enemy plane
             size_t enemyIdx = (i == 0) ? 1 : 0;
