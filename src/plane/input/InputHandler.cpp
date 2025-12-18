@@ -158,7 +158,7 @@ namespace plane::input
                 if (glfwGetKey(window, bindings.flapRightDown) == GLFW_PRESS)
                     flapLTarget = glm::radians(-kMaxFlapAngleDeg);  // left flap down 30°
             }
-            else{
+            else if (payload != NULL){
                 // handle tail
                 if (payload->analogLeftY <= 0x75 || payload->analogLeftY >= 0x85) {
                     float mappedTailAngle = ((payload->analogLeftY/255.0)*90.0)-45.0;
