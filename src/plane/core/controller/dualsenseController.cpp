@@ -14,8 +14,11 @@ DualSense::DualSense(hid_device_info *openDeviceInfo){
         std::abort();
     }
 
-    this->dev = hid_open(openDeviceInfo->vendor_id,
-                        openDeviceInfo->product_id,NULL);
+    //this->dev = hid_open(openDeviceInfo->vendor_id,
+    //                    openDeviceInfo->product_id,
+    //                    openDeviceInfo->serial_number);
+
+    this->dev = hid_open_path(openDeviceInfo->path);
 
 
     if(this->dev == NULL){
@@ -30,16 +33,26 @@ DualSense::DualSense(hid_device_info *openDeviceInfo){
 
     this->simpleBTInputReport = (struct simpleBluetoothPacket*)std::calloc(1,sizeof(struct simpleBluetoothPacket));
 
+    this->usbInputReport = (struct usbInputReport*)std::calloc(1, sizeof(struct usbInputReport));
+    this->usbInputReport->reportID = 0x01;
+
     // Initialize output report packet
     this->outputReportBT = (struct outputReportBT*)std::calloc(1,sizeof(struct outputReportBT));
     std::memset(this->outputReportBT,0,sizeof(struct outputReportBT));
     this->outputReportBT->Data.reportId = 0x31;
 }
 
-struct inputReportPayload DualSense::getInputReport(){
-    this->inputReport->reportID = 0x31;
-    int readReturn = hid_read(this->dev,(unsigned char *)(this->inputReport),sizeof(struct bluetoothFullInputReportPacket));
-    return (this->inputReport)->data.payload;
+struct inputReportPayload DualSense::getInputReport(uint8_t isUSB){
+    if (isUSB == 1) {
+        this->usbInputReport->reportID = 0x01;
+        int retVal = hid_read(this->dev, (unsigned char*)(this->usbInputReport), sizeof(struct usbInputReport));
+        return (this->usbInputReport)->payload;
+    }
+    else {
+        this->inputReport->reportID = 0x31;
+        hid_read(this->dev,(unsigned char *)(this->inputReport),sizeof(struct bluetoothFullInputReportPacket));
+        return (this->inputReport)->data.payload;
+    }
 }
 
 struct simpleBluetoothPayload DualSense::getBTSimpleReport(){
@@ -47,6 +60,7 @@ struct simpleBluetoothPayload DualSense::getBTSimpleReport(){
     hid_get_input_report(this->dev,(unsigned char *)this->simpleBTInputReport,sizeof(struct simpleBluetoothPacket));
     return this->simpleBTInputReport->payload;
 }
+
 
 
 DualSense& DualSense::enableRumbleEmulation(void){
@@ -108,7 +122,7 @@ DualSense& DualSense::send(void){
         this->outputReportBT->crc.dataBuffer,
         sizeof(this->outputReportBT->crc.dataBuffer));
    
-    std::cout << crc.checksum() << std::endl;
+    std::cout << std::hex << crc.checksum() << std::endl;
 
     this->outputReportBT->crc.crc = crc.checksum();
     hid_send_output_report(this->dev,(unsigned char*)this->outputReportBT,sizeof(struct outputReportBT));

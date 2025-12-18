@@ -72,6 +72,7 @@ struct dualshock4_hid_in_payload{
 class DualSense{
     private:
         hid_device *dev;
+        struct usbInputReport                   *usbInputReport;
         struct bluetoothFullInputReportPacket   *inputReport;
         struct simpleBluetoothPacket            *simpleBTInputReport;
         struct outputReportBT                   *outputReportBT;
@@ -86,7 +87,7 @@ class DualSense{
         }
 
     public:
-        struct inputReportPayload getInputReport();
+        struct inputReportPayload getInputReport(uint8_t isUSB);
         struct simpleBluetoothPayload getBTSimpleReport();
 
         //void sendOuputReportTest(){

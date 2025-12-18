@@ -211,6 +211,12 @@ template<int N> struct bluetoothCRC{
         uint8_t     padding[9];
     };
 
+    #pragma pack(1)
+    struct usbInputReport {
+        uint8_t reportID; // 0x01
+        struct inputReportPayload payload;
+    };
+
     //-- Full bluetooth input report data packet
     #pragma pack(1)
     struct  bluetoothFullInputReportPacket{
@@ -362,6 +368,7 @@ struct setStatePayload{
 };
 
 // Report ID must set to 0x02
+#pragma pack(1)
 struct outputReportPacketUsb{
     uint8_t reportID;
     struct setStatePayload payload;
