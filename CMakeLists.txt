@@ -68,11 +68,15 @@ configure_file(configuration/root_directory.h.in configuration/root_directory.h)
 include_directories(${CMAKE_BINARY_DIR}/configuration)
 
 # first create relevant static libraries required for other projects
-add_library(STB_IMAGE "src/stb_image.cpp")
+add_library(STB_IMAGE "src/stb_image.cpp" "src/plane/core/controller/Controller.cpp" "src/plane/core/controller/dualsenseController.cpp")
 set(LIBS ${LIBS} STB_IMAGE)
 
-add_library(GLAD "src/glad.c")
+add_library(GLAD "src/glad.c" "src/plane/core/controller/Controller.cpp" "src/plane/core/controller/dualsenseController.cpp")
 set(LIBS ${LIBS} GLAD)
+
+add_library(HIDAPI  "includes/hidapi/hid.c" "src/plane/core/controller/Controller.cpp" "src/plane/core/controller/dualsenseController.cpp")
+target_include_directories(HIDAPI PUBLIC ${CMAKE_SOURCE_DIR}/includes)
+set(LIBS ${LIBS} HIDAPI)
 
 macro(makeLink src dest target)
   add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink ${src} ${dest}  DEPENDS  ${dest} COMMENT "mklink ${src} -> ${dest}")
@@ -97,7 +101,7 @@ function(create_project_from_sources chapter demo)
 	else()
 		set(NAME "${chapter}__${demo}")
 	endif()
-    add_executable(${NAME} ${SOURCE})
+    add_executable(${NAME} ${SOURCE} "src/plane/core/controller/Controller.cpp" "src/plane/core/controller/dualsenseController.cpp")
     target_link_libraries(${NAME} ${LIBS})
     target_include_directories(${NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src/${chapter}/${demo})
     if(MSVC)

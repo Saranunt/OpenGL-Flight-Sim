@@ -40,5 +40,10 @@ namespace plane::core
         float tailAngle { 0.0f };   // Current tail rotation angle (radians)
         float flapRAngle { 0.0f };  // Current right flap angle (radians)
         float flapLAngle { 0.0f };  // Current left flap angle (radians)
+
+        // Firing cooldown state
+        float fireCooldown { 0.0f };
+        float fireRatePerSec { 8.0f }; // bullets per second
+
     };
 }

@@ -27,7 +27,7 @@ namespace plane::input
         }
     }
 
-    void InputHandler::ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings, plane::app::Plane* plane) const
+    void InputHandler::ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings, plane::app::Plane* plane, struct inputReportPayload* payload) const
     {
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         {
@@ -40,15 +40,23 @@ namespace plane::input
         float yawDelta = 0.0f;
         float rollDelta = 0.0f;
         
+        // For polling data from the Dualsense controller
+
         // Track pitch input and calculate speed
         bool pitchInputActive = false;
-        if (glfwGetKey(window, bindings.pitchUp) == GLFW_PRESS)
+        if (glfwGetKey(window, bindings.pitchUp) == GLFW_PRESS || payload != NULL)
         {
             pitchInputActive = true;
             planeState.pitchInputTime += timingState.deltaTime;
             float t = glm::clamp(planeState.pitchInputTime / kRotationAccelTime, 0.0f, 1.0f);
             float currentSpeed = glm::mix(kMinRotationSpeed, kMaxRotationSpeed_pitch, t);
-            pitchDelta += currentSpeed * timingState.deltaTime;
+            if (payload == NULL) {
+                pitchDelta += currentSpeed * timingState.deltaTime;
+            }
+            else  {
+                if(payload->analogLeftY <= 0x75 || payload->analogLeftY >= 0x85 )
+                    pitchDelta += currentSpeed * timingState.deltaTime * ((((payload->analogLeftY) / 255.0)-0.5)*-2.0);
+            }
         }
         if (glfwGetKey(window, bindings.pitchDown) == GLFW_PRESS)
         {
@@ -63,13 +71,20 @@ namespace plane::input
 
         // Track roll input and calculate speed
         bool rollInputActive = false;
-        if (glfwGetKey(window, bindings.rollRight) == GLFW_PRESS)
+        if (glfwGetKey(window, bindings.rollRight) == GLFW_PRESS || payload != NULL)
         {
             rollInputActive = true;
             planeState.rollInputTime += timingState.deltaTime;
             float t = glm::clamp(planeState.rollInputTime / kRotationAccelTime, 0.0f, 1.0f);
             float currentSpeed = glm::mix(kMinRotationSpeed, kMaxRotationSpeed, t);
-            rollDelta += currentSpeed * timingState.deltaTime;
+
+            if (payload == NULL) {
+                rollDelta += currentSpeed * timingState.deltaTime;
+            }
+            else {
+                //if (payload->analogRightX <= 0x75 || payload->analogRightX >= 0x85)
+                    rollDelta += currentSpeed * timingState.deltaTime * ((((payload->analogRightX) / 255.0) - 0.5) * 2.0);
+            }
         }
         if (glfwGetKey(window, bindings.rollLeft) == GLFW_PRESS)
         {
@@ -79,6 +94,11 @@ namespace plane::input
             float currentSpeed = glm::mix(kMinRotationSpeed, kMaxRotationSpeed, t);
             rollDelta -= currentSpeed * timingState.deltaTime;
         }
+        if (glfwGetKey(window, bindings.throttleUp) == GLFW_PRESS)
+            planeState.speed += kAcceleration * timingState.deltaTime;
+        if (glfwGetKey(window, bindings.throttleDown) == GLFW_PRESS)
+            planeState.speed -= kAcceleration * timingState.deltaTime;
+
         if (!rollInputActive)
             planeState.rollInputTime = 0.0f;
 
@@ -88,7 +108,7 @@ namespace plane::input
         // Apply pitch and yaw with roll compensation
         // When rolled, pitch input should affect both pitch and yaw
         float rollRad = glm::radians(planeState.roll);
-        
+         
         // Reduce pitch effect as roll approaches ±90°
         // Use max(0.1, cos(abs(roll))) to clamp minimum at 0.1
         float cosAbsRoll = std::abs(std::cos(rollRad));
@@ -122,20 +142,41 @@ namespace plane::input
         // Optional per-part transforms when a plane pointer is provided.
         if (plane)
         {
-            // Targets (radians)
             float tailTarget = 0.0f;
-            if (glfwGetKey(window, bindings.tailUp) == GLFW_PRESS)
-                tailTarget = glm::radians(kMaxTailAngleDeg);    // up to +30°
-            else if (glfwGetKey(window, bindings.tailDown) == GLFW_PRESS)
-                tailTarget = glm::radians(-kMaxTailAngleDeg);   // down to -30°
-
             float flapRTarget = 0.0f;
-            if (glfwGetKey(window, bindings.flapLeftDown) == GLFW_PRESS)
-                flapRTarget = glm::radians(-kMaxFlapAngleDeg);  // right flap down 30°
-
             float flapLTarget = 0.0f;
-            if (glfwGetKey(window, bindings.flapRightDown) == GLFW_PRESS)
-                flapLTarget = glm::radians(-kMaxFlapAngleDeg);  // left flap down 30°
+            if (payload == NULL){
+                // Targets (radians)
+                if (glfwGetKey(window, bindings.tailUp) == GLFW_PRESS)
+                    tailTarget = glm::radians(kMaxTailAngleDeg);    // up to +30°
+                else if (glfwGetKey(window, bindings.tailDown) == GLFW_PRESS)
+                    tailTarget = glm::radians(-kMaxTailAngleDeg);   // down to -30°
+
+                if (glfwGetKey(window, bindings.flapLeftDown) == GLFW_PRESS)
+                    flapRTarget = glm::radians(-kMaxFlapAngleDeg);  // right flap down 30°
+
+                if (glfwGetKey(window, bindings.flapRightDown) == GLFW_PRESS)
+                    flapLTarget = glm::radians(-kMaxFlapAngleDeg);  // left flap down 30°
+            }
+            else{
+                // handle tail
+                if (payload->analogLeftY <= 0x75 || payload->analogLeftY >= 0x85) {
+                    float mappedTailAngle = ((payload->analogLeftY/255.0)*90.0)-45.0;
+                    tailTarget = glm::radians(kMaxTailAngleDeg);
+                }
+                // handle flaps with right stick X: >0x7F left flap down, <0x7F right flap down
+                if (payload->analogRightX > 0x7F) {
+                    float t = (payload->analogRightX - 0x7F) / static_cast<float>(0xFF - 0x7F);
+                    t = glm::clamp(t, 0.0f, 1.0f);
+                    flapLTarget = glm::radians(-kMaxFlapAngleDeg * t);
+                }
+                else if (payload->analogRightX < 0x7F) {
+                    float t = (0x7F - payload->analogRightX) / static_cast<float>(0x7F);
+                    t = glm::clamp(t, 0.0f, 1.0f);
+                    flapRTarget = glm::radians(-kMaxFlapAngleDeg * t);
+                }
+            }
+
 
             // Approach targets smoothly
             const float tailStepMax = glm::radians(kTailMoveSpeedDeg) * timingState.deltaTime;
@@ -163,6 +204,11 @@ namespace plane::input
         if (planeState.baseSpeed > 50.0f) planeState.baseSpeed = 50.0f;
 
         planeState.boostHeld = (glfwGetKey(window, bindings.boost) == GLFW_PRESS);
+        if (payload != NULL) {
+            if (payload->triggerLeft > 0x7F) {
+                planeState.boostHeld = planeState.boostHeld || true;
+            }
+        }
     }
 
     void InputHandler::OnMouseMove(double xposIn, double yposIn, core::CameraRig& cameraRig) const

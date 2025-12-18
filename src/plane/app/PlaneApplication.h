@@ -34,6 +34,8 @@
 #include "render/Skybox.h"
 #include "render/TerrainPlane.h"
 #include "world/IslandManager.h"
+#include <hidapi/hidapi.h>
+#include "core/controller/Controller.hpp"
 #include "Plane.h"
 
 namespace plane::app
@@ -77,8 +79,6 @@ namespace plane::app
             core::PlaneState state;
             core::CameraRig cameraRig;
             core::CameraController cameraController;
-            float fireCooldown { 0.0f };
-            float fireRatePerSec { 8.0f }; // bullets per second
         };
 
         GLFWwindow* window_ { nullptr };
@@ -115,5 +115,6 @@ namespace plane::app
         
         core::GameState gameState_ { core::GameState::StartMenu };
         bool spacePressed_ { false };
+        DualSense* controller[2];
     };
 }
