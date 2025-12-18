@@ -124,6 +124,7 @@ namespace plane::app
         boostTrailRenderer_.Shutdown();
         startMenuRenderer_.Shutdown();
         shadowMap_.Shutdown();
+        skybox_.Shutdown();
         glfwTerminate();
     }
 
@@ -176,6 +177,7 @@ namespace plane::app
         InitializePlayers();
         shader_ = std::make_unique<Shader>("plane.vs", "plane.fs");
         shadowShader_ = std::make_unique<Shader>("shadow_depth.vs", "shadow_depth.fs");
+        skyboxShader_ = std::make_unique<Shader>("skybox.vs", "skybox.fs");
 
         plane_ = std::make_unique<Plane>();
         if (!plane_->LoadModels())
@@ -191,6 +193,15 @@ namespace plane::app
         if (!shadowMap_.Initialize(2048, 2048))
         {
             std::cout << "Failed to initialize shadow map resources." << std::endl;
+        }
+        if (!skybox_.Initialize(FileSystem::getPath("resources/textures/skybox")))
+        {
+            std::cout << "Failed to initialize skybox resources." << std::endl;
+        }
+        if (skyboxShader_)
+        {
+            skyboxShader_->use();
+            skyboxShader_->setInt("skybox", 0);
         }
 
         shootingSystem_.Initialize();
@@ -439,6 +450,11 @@ namespace plane::app
 
     void PlaneApplication::RenderColorPass(const glm::mat4& projection, const glm::mat4& view, const glm::mat4& lightSpaceMatrix, const core::CameraRig& cameraRig)
     {
+        if (skyboxShader_)
+        {
+            skybox_.Draw(projection, view, *skyboxShader_);
+        }
+
         shader_->use();
         shader_->setMat4("projection", projection);
         shader_->setMat4("view", view);
