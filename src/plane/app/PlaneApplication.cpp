@@ -120,7 +120,7 @@ namespace plane::app
                 sendIn = NULL;
             }
 
-            inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i], sendIn);
+            inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i], plane_.get(), sendIn);
              //Fire bullets at a rate-limited cadence while the fire key is held.
             player.state.fireCooldown = (std::max)(0.0f, player.state.fireCooldown - timingState_.deltaTime);
 
@@ -142,7 +142,8 @@ namespace plane::app
 
             planeController_.UpdateFlightDynamics(player.state, timingState_.deltaTime);
             collisionSystem_.CheckAndResolveCollisions(player.state, timingState_.deltaTime);
-            player.cameraController.Update(player.state, player.cameraRig);
+            boostTrailRenderer_.UpdateForPlane(player.state, timingState_.deltaTime, i);
+            player.cameraController.Update(player.state, player.cameraRig, timingState_.deltaTime);
         }
 
         // Update game systems
@@ -158,8 +159,10 @@ namespace plane::app
         groundPlane_.Shutdown();
         terrainPlane_.Shutdown();
         healthBarRenderer_.Shutdown();
+        boostTrailRenderer_.Shutdown();
         startMenuRenderer_.Shutdown();
         shadowMap_.Shutdown();
+        skybox_.Shutdown();
         glfwTerminate();
     }
 
@@ -212,7 +215,14 @@ namespace plane::app
         InitializePlayers();
         shader_ = std::make_unique<Shader>("plane.vs", "plane.fs");
         shadowShader_ = std::make_unique<Shader>("shadow_depth.vs", "shadow_depth.fs");
-        planeModel_ = std::make_unique<Model>(FileSystem::getPath("resources/objects/plane/plane.dae"));
+        skyboxShader_ = std::make_unique<Shader>("skybox.vs", "skybox.fs");
+
+        plane_ = std::make_unique<Plane>();
+        if (!plane_->LoadModels())
+        {
+            std::cout << "Failed to load one or more plane parts from plane2/ folder" << std::endl;
+        }
+
         islandModel_ = std::make_unique<Model>(FileSystem::getPath("resources/objects/island4/Untitled.dae"));
 
         islandManager_.GenerateIslands();
@@ -222,12 +232,22 @@ namespace plane::app
         {
             std::cout << "Failed to initialize shadow map resources." << std::endl;
         }
+        if (!skybox_.Initialize(FileSystem::getPath("resources/textures/skybox")))
+        {
+            std::cout << "Failed to initialize skybox resources." << std::endl;
+        }
+        if (skyboxShader_)
+        {
+            skyboxShader_->use();
+            skyboxShader_->setInt("skybox", 0);
+        }
 
         shootingSystem_.Initialize();
         skeletalAnimationSystem_.Initialize();
         movementSystem_.Initialize();
         multiplayerManager_.Initialize();
         healthBarRenderer_.Initialize();
+        boostTrailRenderer_.Initialize();
         startMenuRenderer_.Initialize(FileSystem::getPath("resources/startmenu.jpg"));
         collisionSystem_.Initialize(islandManager_, &terrainPlane_);
     }
@@ -235,7 +255,7 @@ namespace plane::app
     void PlaneApplication::InitializePlayers()
     {
         players_[0].state.position = glm::vec3(100.0f, 26.0f, 0.0f);
-        players_[1].state.position = glm::vec3(-100.0f, 26.0f, 0.0f);
+        players_[1].state.position = glm::vec3(-100.0f, 96.0f, 0.0f);
 
         inputBindings_[0] = input::InputBindings{};
         inputBindings_[1] = input::InputBindings{
@@ -245,6 +265,7 @@ namespace plane::app
             GLFW_KEY_RIGHT,
             GLFW_KEY_RIGHT_SHIFT,
             GLFW_KEY_RIGHT_CONTROL,
+            GLFW_KEY_BACKSPACE,
             GLFW_KEY_ENTER
         };
 
@@ -309,7 +330,12 @@ namespace plane::app
         players_[0].state.pitch = 0.0f;
         players_[0].state.yaw = 0.0f;
         players_[0].state.roll = 0.0f;
-        players_[0].state.speed = 5.0f;
+        players_[0].state.baseSpeed = 25.0f;
+        players_[0].state.speed = players_[0].state.baseSpeed;
+        players_[0].state.boosterFuelSeconds = players_[0].state.boosterMaxFuelSeconds;
+        players_[0].state.boostHeld = false;
+        players_[0].state.isBoosting = false;
+        players_[0].state.boosterExhausted = false;
         players_[0].state.health = 100.0f;
         players_[0].state.isAlive = true;
         players_[0].state.pitchInputTime = 0.0f;
@@ -317,11 +343,16 @@ namespace plane::app
         players_[0].state.fireCooldown = 0.0f;
         
         // Reset player 2
-        players_[1].state.position = glm::vec3(-100.0f, 26.0f, 0.0f);
+        players_[1].state.position = glm::vec3(-100.0f, 96.0f, 0.0f);
         players_[1].state.pitch = 0.0f;
         players_[1].state.yaw = 0.0f;
         players_[1].state.roll = 0.0f;
-        players_[1].state.speed = 5.0f;
+        players_[1].state.baseSpeed = 25.0f;
+        players_[1].state.speed = players_[1].state.baseSpeed;
+        players_[1].state.boosterFuelSeconds = players_[1].state.boosterMaxFuelSeconds;
+        players_[1].state.boostHeld = false;
+        players_[1].state.isBoosting = false;
+        players_[1].state.boosterExhausted = false;
         players_[1].state.health = 100.0f;
         players_[1].state.isAlive = true;
         players_[1].state.pitchInputTime = 0.0f;
@@ -382,6 +413,14 @@ namespace plane::app
                 cam.Front,
                 cam.Up);
 
+            healthBarRenderer_.RenderPlayerBoosterBillboard(
+                players_[i].state,
+                projection,
+                view,
+                cam.Position,
+                cam.Front,
+                cam.Up);
+
             // Render aiming reticle in front of the plane
             healthBarRenderer_.RenderAimingReticle(
                 players_[i].state,
@@ -391,6 +430,7 @@ namespace plane::app
             // Render enemy health bar above enemy plane
             size_t enemyIdx = (i == 0) ? 1 : 0;
             healthBarRenderer_.RenderEnemyHealthBar(players_[enemyIdx].state, projection, view, players_[i].cameraRig.camera.Position);
+            healthBarRenderer_.RenderEnemyTargetGuide(players_[enemyIdx].state, projection, view);
         }
 
         // Draw a simple vertical divider between the two viewports.
@@ -449,6 +489,11 @@ namespace plane::app
 
     void PlaneApplication::RenderColorPass(const glm::mat4& projection, const glm::mat4& view, const glm::mat4& lightSpaceMatrix, const core::CameraRig& cameraRig)
     {
+        if (skyboxShader_)
+        {
+            skybox_.Draw(projection, view, *skyboxShader_);
+        }
+
         shader_->use();
         shader_->setMat4("projection", projection);
         shader_->setMat4("view", view);
@@ -466,6 +511,9 @@ namespace plane::app
         // Draw bullets after the main geometry so they appear on top.
         shootingSystem_.Render(*shader_);
 
+        // Boost particles (trail) in world space.
+        boostTrailRenderer_.Render(projection, view);
+
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, 0);
     }
@@ -477,8 +525,8 @@ namespace plane::app
         terrainPlane_.Draw(shader, bindTextures);  // Use heightmap terrain instead of island models
         for (const auto& player : players_)
         {   
-            if (player.state.isAlive)
-            planeRenderer_.Draw(*planeModel_, shader, player.state);
+            if (player.state.isAlive && plane_)
+                planeRenderer_.Draw(*plane_, shader, player.state);
         }
     }
 
@@ -487,7 +535,7 @@ namespace plane::app
         // Build an orthographic frustum that follows both planes, emulating sun light.
         glm::vec3 lightDir = glm::normalize(lightDirection_);
         glm::vec3 center = 0.5f * (players_[0].state.position + players_[1].state.position);
-        float radius = std::max(
+        float radius = (std::max)(
             glm::length(players_[0].state.position - center),
             glm::length(players_[1].state.position - center)
         );

@@ -20,19 +20,23 @@
 #include "entities/PlaneController.h"
 #include "features/animation/SkeletalAnimationSystem.h"
 #include "features/movement/AdvancedMovementSystem.h"
+#include "features/movement/BoosterSystem.h"
 #include "features/multiplayer/MultiplayerManager.h"
 #include "features/shooting/ShootingSystem.h"
 #include "input/InputHandler.h"
 #include "physics/CollisionSystem.h"
 #include "render/GroundPlane.h"
+#include "render/BoostTrailRenderer.h"
 #include "render/HealthBarRenderer.h"
 #include "render/PlaneRenderer.h"
 #include "render/ShadowMap.h"
 #include "render/StartMenuRenderer.h"
+#include "render/Skybox.h"
 #include "render/TerrainPlane.h"
 #include "world/IslandManager.h"
 #include <hidapi/hidapi.h>
 #include "core/controller/Controller.hpp"
+#include "Plane.h"
 
 namespace plane::app
 {
@@ -79,16 +83,19 @@ namespace plane::app
 
         GLFWwindow* window_ { nullptr };
         std::unique_ptr<Shader> shader_;
-        std::unique_ptr<Model> planeModel_;
+        std::unique_ptr<Plane> plane_;
         std::unique_ptr<Model> islandModel_;
         std::unique_ptr<Shader> shadowShader_;
+        std::unique_ptr<Shader> skyboxShader_;
 
         render::GroundPlane groundPlane_;
         render::TerrainPlane terrainPlane_;
         render::PlaneRenderer planeRenderer_;
+        render::BoostTrailRenderer boostTrailRenderer_;
         render::HealthBarRenderer healthBarRenderer_;
         render::StartMenuRenderer startMenuRenderer_;
         render::ShadowMap shadowMap_;
+        render::Skybox skybox_;
         world::IslandManager islandManager_;
 
         std::array<PlayerContext, 2> players_;
@@ -101,6 +108,7 @@ namespace plane::app
         features::shooting::ShootingSystem shootingSystem_;
         features::animation::SkeletalAnimationSystem skeletalAnimationSystem_;
         features::movement::AdvancedMovementSystem movementSystem_;
+        features::movement::BoosterSystem boosterSystem_;
         features::multiplayer::MultiplayerManager multiplayerManager_;
 
         glm::vec3 lightDirection_ { -0.3f, -1.0f, -0.3f };

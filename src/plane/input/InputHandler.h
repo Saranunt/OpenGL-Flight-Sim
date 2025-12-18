@@ -7,6 +7,8 @@
 #include "core/Timing.h"
 #include "core/controller/Controller.hpp"
 
+namespace plane::app { class Plane; }
+
 namespace plane::input
 {
     struct InputBindings
@@ -17,13 +19,14 @@ namespace plane::input
         int rollRight { GLFW_KEY_D };
         int throttleUp { GLFW_KEY_Z };
         int throttleDown { GLFW_KEY_X };
+        int boost { GLFW_KEY_LEFT_SHIFT };
         int fire { GLFW_KEY_SPACE };
     };
 
     class InputHandler
     {
     public:
-        void ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings,struct inputReportPayload* payload) const;
+        void ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings, plane::app::Plane* plane = nullptr, struct inputReportPayload* payload = nullptr) const;
         void OnMouseMove(double xposIn, double yposIn, core::CameraRig& cameraRig) const;
         void OnScroll(double yoffset, core::CameraRig& cameraRig) const;
     };

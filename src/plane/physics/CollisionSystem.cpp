@@ -70,6 +70,7 @@ namespace plane::physics
             
             // Reduce speed slightly from impact.
             // TUNE: 0.95f = lose 5% speed per collision. Increase (0.98f) for less penalty.
+            planeState.baseSpeed *= 0.95f;
             planeState.speed *= 0.95f;
             
             return true;

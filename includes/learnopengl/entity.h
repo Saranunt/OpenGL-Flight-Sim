@@ -192,7 +192,7 @@ struct Sphere : public BoundingVolume
 		const glm::vec3 globalCenter{ transform.getModelMatrix() * glm::vec4(center, 1.f) };
 
 		//To wrap correctly our shape, we need the maximum scale scalar.
-		const float maxScale = std::max(std::max(globalScale.x, globalScale.y), globalScale.z);
+		const float maxScale = (std::max)((std::max)(globalScale.x, globalScale.y), globalScale.z);
 
 		//Max scale is assuming for the diameter. So, we need the half to apply it to our radius
 		Sphere globalSphere(globalCenter, radius * (maxScale * 0.5f));
@@ -245,7 +245,7 @@ struct SquareAABB : public BoundingVolume
 			std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, up)) +
 			std::abs(glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, forward));
 
-		const SquareAABB globalAABB(globalCenter, std::max(std::max(newIi, newIj), newIk));
+		const SquareAABB globalAABB(globalCenter, (std::max)((std::max)(newIi, newIj), newIk));
 
 		return (globalAABB.isOnOrForwardPlane(camFrustum.leftFace) &&
 			globalAABB.isOnOrForwardPlane(camFrustum.rightFace) &&
@@ -350,13 +350,13 @@ AABB generateAABB(const Model& model)
 	{
 		for (auto&& vertex : mesh.vertices)
 		{
-			minAABB.x = std::min(minAABB.x, vertex.Position.x);
-			minAABB.y = std::min(minAABB.y, vertex.Position.y);
-			minAABB.z = std::min(minAABB.z, vertex.Position.z);
+			minAABB.x = (std::min)(minAABB.x, vertex.Position.x);
+			minAABB.y = (std::min)(minAABB.y, vertex.Position.y);
+			minAABB.z = (std::min)(minAABB.z, vertex.Position.z);
 
-			maxAABB.x = std::max(maxAABB.x, vertex.Position.x);
-			maxAABB.y = std::max(maxAABB.y, vertex.Position.y);
-			maxAABB.z = std::max(maxAABB.z, vertex.Position.z);
+			maxAABB.x = (std::max)(maxAABB.x, vertex.Position.x);
+			maxAABB.y = (std::max)(maxAABB.y, vertex.Position.y);
+			maxAABB.z = (std::max)(maxAABB.z, vertex.Position.z);
 		}
 	}
 	return AABB(minAABB, maxAABB);
@@ -370,13 +370,13 @@ Sphere generateSphereBV(const Model& model)
 	{
 		for (auto&& vertex : mesh.vertices)
 		{
-			minAABB.x = std::min(minAABB.x, vertex.Position.x);
-			minAABB.y = std::min(minAABB.y, vertex.Position.y);
-			minAABB.z = std::min(minAABB.z, vertex.Position.z);
+			minAABB.x = (std::min)(minAABB.x, vertex.Position.x);
+			minAABB.y = (std::min)(minAABB.y, vertex.Position.y);
+			minAABB.z = (std::min)(minAABB.z, vertex.Position.z);
 
-			maxAABB.x = std::max(maxAABB.x, vertex.Position.x);
-			maxAABB.y = std::max(maxAABB.y, vertex.Position.y);
-			maxAABB.z = std::max(maxAABB.z, vertex.Position.z);
+			maxAABB.x = (std::max)(maxAABB.x, vertex.Position.x);
+			maxAABB.y = (std::max)(maxAABB.y, vertex.Position.y);
+			maxAABB.z = (std::max)(maxAABB.z, vertex.Position.z);
 		}
 	}
 

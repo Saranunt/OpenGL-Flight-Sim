@@ -1,8 +1,11 @@
 #include "HealthBarRenderer.h"
 
 #include <glad/glad.h>
+#include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <algorithm>
+#include <cmath>
 
 #include "core/PlaneState.h"
 #include "core/CameraRig.h"
@@ -33,119 +36,60 @@ namespace plane::render
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindVertexArray(0);
 
+        // Slender isosceles triangle for the enemy guide arrow
+        float guideVertices[] = {
+            0.0f,  0.8f,   // Tip
+           -0.35f, -0.5f,  // Bottom left
+            0.35f, -0.5f   // Bottom right
+        };
+
+        glGenVertexArrays(1, &guideVao_);
+        glGenBuffers(1, &guideVbo_);
+        glBindVertexArray(guideVao_);
+        glBindBuffer(GL_ARRAY_BUFFER, guideVbo_);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(guideVertices), guideVertices, GL_STATIC_DRAW);
+
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+
         CreateShaders();
     }
 
     void HealthBarRenderer::CreateShaders()
     {
-        // UI Shader (2D screen space)
-        const char* uiVertexShaderSource = R"(
-            #version 330 core
-            layout (location = 0) in vec2 aPos;
-            
-            uniform mat4 transform;
-            
-            void main()
-            {
-                gl_Position = transform * vec4(aPos, 0.0, 1.0);
-            }
-        )";
-
-        const char* uiFragmentShaderSource = R"(
-            #version 330 core
-            out vec4 FragColor;
-            
-            uniform vec3 color;
-            
-            void main()
-            {
-                FragColor = vec4(color, 1.0);
-            }
-        )";
-
-        // Billboard Shader (3D world space, camera-facing)
-        const char* billboardVertexShaderSource = R"(
-            #version 330 core
-            layout (location = 0) in vec2 aPos;
-            
-            uniform mat4 projection;
-            uniform mat4 view;
-            uniform vec3 worldPos;
-            uniform vec3 cameraRight;
-            uniform vec3 cameraUp;
-            uniform vec2 scale;
-            
-            void main()
-            {
-                vec3 vertexWorld = worldPos 
-                    + cameraRight * aPos.x * scale.x
-                    + cameraUp * aPos.y * scale.y;
-                gl_Position = projection * view * vec4(vertexWorld, 1.0);
-            }
-        )";
-
-        const char* billboardFragmentShaderSource = R"(
-            #version 330 core
-            out vec4 FragColor;
-            
-            uniform vec3 color;
-            
-            void main()
-            {
-                FragColor = vec4(color, 1.0);
-            }
-        )";
-
-        // Compile UI shader
-        unsigned int uiVertexShader = glCreateShader(GL_VERTEX_SHADER);
-        glShaderSource(uiVertexShader, 1, &uiVertexShaderSource, NULL);
-        glCompileShader(uiVertexShader);
-
-        unsigned int uiFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-        glShaderSource(uiFragmentShader, 1, &uiFragmentShaderSource, NULL);
-        glCompileShader(uiFragmentShader);
-
-        uiShaderProgram_ = glCreateProgram();
-        glAttachShader(uiShaderProgram_, uiVertexShader);
-        glAttachShader(uiShaderProgram_, uiFragmentShader);
-        glLinkProgram(uiShaderProgram_);
-
-        glDeleteShader(uiVertexShader);
-        glDeleteShader(uiFragmentShader);
-
-        // Compile billboard shader
-        unsigned int billboardVertexShader = glCreateShader(GL_VERTEX_SHADER);
-        glShaderSource(billboardVertexShader, 1, &billboardVertexShaderSource, NULL);
-        glCompileShader(billboardVertexShader);
-
-        unsigned int billboardFragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-        glShaderSource(billboardFragmentShader, 1, &billboardFragmentShaderSource, NULL);
-        glCompileShader(billboardFragmentShader);
-
-        billboardShaderProgram_ = glCreateProgram();
-        glAttachShader(billboardShaderProgram_, billboardVertexShader);
-        glAttachShader(billboardShaderProgram_, billboardFragmentShader);
-        glLinkProgram(billboardShaderProgram_);
-
-        glDeleteShader(billboardVertexShader);
-        glDeleteShader(billboardFragmentShader);
+        uiShaderProgram_ = std::make_unique<Shader>("ui.vs", "ui.fs");
+        billboardShaderProgram_ = std::make_unique<Shader>("billboard.vs", "billboard.fs");
+        enemyGuideShaderProgram_ = std::make_unique<Shader>("enemy_target_guide.vs", "enemy_target_guide.fs");
     }
 
     void HealthBarRenderer::Shutdown()
     {
-        if (barVao_ != 0)
+        if (barVbo_ != 0)
         {
             glDeleteBuffers(1, &barVbo_);
+            barVbo_ = 0;
+        }
+        if (barVao_ != 0)
+        {
             glDeleteVertexArrays(1, &barVao_);
+            barVao_ = 0;
         }
-        if (uiShaderProgram_ != 0)
+        if (guideVbo_ != 0)
         {
-            glDeleteProgram(uiShaderProgram_);
+            glDeleteBuffers(1, &guideVbo_);
+            guideVbo_ = 0;
         }
-        if (billboardShaderProgram_ != 0)
+        if (guideVao_ != 0)
         {
-            glDeleteProgram(billboardShaderProgram_);
+            glDeleteVertexArrays(1, &guideVao_);
+            guideVao_ = 0;
         }
+        uiShaderProgram_.reset();
+        billboardShaderProgram_.reset();
+        enemyGuideShaderProgram_.reset();
     }
 
     void HealthBarRenderer::RenderPlayerHealthBar(const core::PlaneState& playerState,
@@ -175,7 +119,7 @@ namespace plane::render
         float ndcWidth = (barWidth / viewportWidth) * 2.0f;
         float ndcHeight = (barHeight / viewportHeight) * 2.0f;
 
-        glUseProgram(uiShaderProgram_);
+        uiShaderProgram_->use();
         glBindVertexArray(barVao_);
 
         glDisable(GL_DEPTH_TEST);
@@ -185,8 +129,8 @@ namespace plane::render
         bgTransform = glm::translate(bgTransform, glm::vec3(ndcX + ndcWidth * 0.5f, ndcY + ndcHeight * 0.5f, 0.0f));
         bgTransform = glm::scale(bgTransform, glm::vec3(ndcWidth, ndcHeight, 1.0f));
 
-        glUniformMatrix4fv(glGetUniformLocation(uiShaderProgram_, "transform"), 1, GL_FALSE, glm::value_ptr(bgTransform));
-        glUniform3f(glGetUniformLocation(uiShaderProgram_, "color"), 0.3f, 0.0f, 0.0f);
+        uiShaderProgram_->setMat4("transform", bgTransform);
+        uiShaderProgram_->setVec3("color", glm::vec3(0.3f, 0.0f, 0.0f));
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
         // Draw health (green)
@@ -194,8 +138,8 @@ namespace plane::render
         healthTransform = glm::translate(healthTransform, glm::vec3(ndcX + ndcWidth * healthPercent * 0.5f, ndcY + ndcHeight * 0.5f, 0.0f));
         healthTransform = glm::scale(healthTransform, glm::vec3(ndcWidth * healthPercent, ndcHeight, 1.0f));
 
-        glUniformMatrix4fv(glGetUniformLocation(uiShaderProgram_, "transform"), 1, GL_FALSE, glm::value_ptr(healthTransform));
-        glUniform3f(glGetUniformLocation(uiShaderProgram_, "color"), 0.0f, 1.0f, 0.0f);
+        uiShaderProgram_->setMat4("transform", healthTransform);
+        uiShaderProgram_->setVec3("color", glm::vec3(0.0f, 1.0f, 0.0f));
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
         glEnable(GL_DEPTH_TEST);
@@ -223,26 +167,26 @@ namespace plane::render
         glm::vec3 cameraRight = glm::vec3(invView[0]);
         glm::vec3 cameraUp = glm::vec3(invView[1]);
 
-        glUseProgram(billboardShaderProgram_);
+        billboardShaderProgram_->use();
         glBindVertexArray(barVao_);
 
         glDisable(GL_DEPTH_TEST);
 
         // Draw background (dark red)
-        glUniformMatrix4fv(glGetUniformLocation(billboardShaderProgram_, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-        glUniformMatrix4fv(glGetUniformLocation(billboardShaderProgram_, "view"), 1, GL_FALSE, glm::value_ptr(view));
-        glUniform3fv(glGetUniformLocation(billboardShaderProgram_, "worldPos"), 1, glm::value_ptr(barWorldPos));
-        glUniform3fv(glGetUniformLocation(billboardShaderProgram_, "cameraRight"), 1, glm::value_ptr(cameraRight));
-        glUniform3fv(glGetUniformLocation(billboardShaderProgram_, "cameraUp"), 1, glm::value_ptr(cameraUp));
-        glUniform2f(glGetUniformLocation(billboardShaderProgram_, "scale"), BILLBOARD_WIDTH, BILLBOARD_HEIGHT);
-        glUniform3f(glGetUniformLocation(billboardShaderProgram_, "color"), 0.5f, 0.0f, 0.0f);
+        billboardShaderProgram_->setMat4("projection", projection);
+        billboardShaderProgram_->setMat4("view", view);
+        billboardShaderProgram_->setVec3("worldPos", barWorldPos);
+        billboardShaderProgram_->setVec3("cameraRight", cameraRight);
+        billboardShaderProgram_->setVec3("cameraUp", cameraUp);
+        billboardShaderProgram_->setVec2("scale", glm::vec2(BILLBOARD_WIDTH, BILLBOARD_HEIGHT));
+        billboardShaderProgram_->setVec3("color", glm::vec3(0.5f, 0.0f, 0.0f));
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
         // Draw health (green) - offset to align left
         glm::vec3 healthBarPos = barWorldPos - cameraRight * BILLBOARD_WIDTH * (1.0f - healthPercent) * 0.5f;
-        glUniform3fv(glGetUniformLocation(billboardShaderProgram_, "worldPos"), 1, glm::value_ptr(healthBarPos));
-        glUniform2f(glGetUniformLocation(billboardShaderProgram_, "scale"), BILLBOARD_WIDTH * healthPercent, BILLBOARD_HEIGHT);
-        glUniform3f(glGetUniformLocation(billboardShaderProgram_, "color"), 0.0f, 1.0f, 0.0f);
+        billboardShaderProgram_->setVec3("worldPos", healthBarPos);
+        billboardShaderProgram_->setVec2("scale", glm::vec2(BILLBOARD_WIDTH * healthPercent, BILLBOARD_HEIGHT));
+        billboardShaderProgram_->setVec3("color", glm::vec3(0.0f, 1.0f, 0.0f));
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
         glEnable(GL_DEPTH_TEST);
@@ -271,25 +215,76 @@ namespace plane::render
         glm::vec3 camRight = glm::vec3(invView[0]);
         glm::vec3 camUp = glm::vec3(invView[1]);
 
-        glUseProgram(billboardShaderProgram_);
+        billboardShaderProgram_->use();
         glBindVertexArray(barVao_);
         glDisable(GL_DEPTH_TEST);
 
         // Background
-        glUniformMatrix4fv(glGetUniformLocation(billboardShaderProgram_, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-        glUniformMatrix4fv(glGetUniformLocation(billboardShaderProgram_, "view"), 1, GL_FALSE, glm::value_ptr(view));
-        glUniform3fv(glGetUniformLocation(billboardShaderProgram_, "worldPos"), 1, glm::value_ptr(barWorldPos));
-        glUniform3fv(glGetUniformLocation(billboardShaderProgram_, "cameraRight"), 1, glm::value_ptr(camRight));
-        glUniform3fv(glGetUniformLocation(billboardShaderProgram_, "cameraUp"), 1, glm::value_ptr(camUp));
+        billboardShaderProgram_->setMat4("projection", projection);
+        billboardShaderProgram_->setMat4("view", view);
+        billboardShaderProgram_->setVec3("worldPos", barWorldPos);
+        billboardShaderProgram_->setVec3("cameraRight", camRight);
+        billboardShaderProgram_->setVec3("cameraUp", camUp);
         // Player bar is slimmer (height scaled to 25%)
         const float playerBarHeight = BILLBOARD_HEIGHT * 0.25f;
-        glUniform2f(glGetUniformLocation(billboardShaderProgram_, "scale"), BILLBOARD_WIDTH, playerBarHeight);
-        glUniform3f(glGetUniformLocation(billboardShaderProgram_, "color"), 0.5f, 0.0f, 0.0f);
+        billboardShaderProgram_->setVec2("scale", glm::vec2(BILLBOARD_WIDTH, playerBarHeight));
+        billboardShaderProgram_->setVec3("color", glm::vec3(0.5f, 0.0f, 0.0f));
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
         // Health fill
-        glUniform2f(glGetUniformLocation(billboardShaderProgram_, "scale"), BILLBOARD_WIDTH * healthPercent, playerBarHeight);
-        glUniform3f(glGetUniformLocation(billboardShaderProgram_, "color"), 0.0f, 1.0f, 0.0f);
+        billboardShaderProgram_->setVec2("scale", glm::vec2(BILLBOARD_WIDTH * healthPercent, playerBarHeight));
+        billboardShaderProgram_->setVec3("color", glm::vec3(0.0f, 1.0f, 0.0f));
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+        glEnable(GL_DEPTH_TEST);
+        glBindVertexArray(0);
+    }
+
+    void HealthBarRenderer::RenderPlayerBoosterBillboard(const core::PlaneState& playerState,
+                                                         const glm::mat4& projection,
+                                                         const glm::mat4& view,
+                                                         const glm::vec3& cameraPos,
+                                                         const glm::vec3& cameraFront,
+                                                         const glm::vec3& cameraUp) const
+    {
+        if (!playerState.isAlive || barVao_ == 0 || billboardShaderProgram_ == 0)
+        {
+            return;
+        }
+
+        float maxFuel = (playerState.boosterMaxFuelSeconds > 0.001f) ? playerState.boosterMaxFuelSeconds : 0.001f;
+        float fuelPercent = glm::clamp(playerState.boosterFuelSeconds / maxFuel, 0.0f, 1.0f);
+
+        // Position directly under the health billboard.
+        glm::vec3 barWorldPos = cameraPos + cameraFront * 6.0f - cameraUp * 1.9f;
+
+        glm::mat4 invView = glm::inverse(view);
+        glm::vec3 camRight = glm::vec3(invView[0]);
+        glm::vec3 camUp = glm::vec3(invView[1]);
+
+        billboardShaderProgram_->use();
+        glBindVertexArray(barVao_);
+        glDisable(GL_DEPTH_TEST);
+
+        billboardShaderProgram_->setMat4("projection", projection);
+        billboardShaderProgram_->setMat4("view", view);
+        billboardShaderProgram_->setVec3("worldPos", barWorldPos);
+        billboardShaderProgram_->setVec3("cameraRight", camRight);
+        billboardShaderProgram_->setVec3("cameraUp", camUp);
+
+        const float barHeight = BILLBOARD_HEIGHT * 0.20f;
+
+        // Background (dark gray)
+        billboardShaderProgram_->setVec2("scale", glm::vec2(BILLBOARD_WIDTH, barHeight));
+        billboardShaderProgram_->setVec3("color", glm::vec3(0.12f, 0.12f, 0.12f));
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+        // Fuel fill (blue, orange when exhausted/recharging)
+        const glm::vec3 fillColor = playerState.boosterExhausted
+            ? glm::vec3(1.0f, 0.55f, 0.0f)
+            : glm::vec3(0.0f, 0.7f, 1.0f);
+        billboardShaderProgram_->setVec2("scale", glm::vec2(BILLBOARD_WIDTH * fuelPercent, barHeight));
+        billboardShaderProgram_->setVec3("color", fillColor);
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
         glEnable(GL_DEPTH_TEST);
@@ -323,21 +318,97 @@ namespace plane::render
         glm::vec3 camRight = glm::vec3(invView[0]);
         glm::vec3 camUp = glm::vec3(invView[1]);
 
-        glUseProgram(billboardShaderProgram_);
+        billboardShaderProgram_->use();
         glBindVertexArray(barVao_);
         glDisable(GL_DEPTH_TEST);
 
         // Small square reticle (shrunk to 1/4 size)
         const float reticleSize = 0.1f;
-        glUniformMatrix4fv(glGetUniformLocation(billboardShaderProgram_, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-        glUniformMatrix4fv(glGetUniformLocation(billboardShaderProgram_, "view"), 1, GL_FALSE, glm::value_ptr(view));
-        glUniform3fv(glGetUniformLocation(billboardShaderProgram_, "worldPos"), 1, glm::value_ptr(reticlePos));
-        glUniform3fv(glGetUniformLocation(billboardShaderProgram_, "cameraRight"), 1, glm::value_ptr(camRight));
-        glUniform3fv(glGetUniformLocation(billboardShaderProgram_, "cameraUp"), 1, glm::value_ptr(camUp));
-        glUniform2f(glGetUniformLocation(billboardShaderProgram_, "scale"), reticleSize, reticleSize);
-        glUniform3f(glGetUniformLocation(billboardShaderProgram_, "color"), 1.0f, 0.0f, 0.0f);
+        billboardShaderProgram_->setMat4("projection", projection);
+        billboardShaderProgram_->setMat4("view", view);
+        billboardShaderProgram_->setVec3("worldPos", reticlePos);
+        billboardShaderProgram_->setVec3("cameraRight", camRight);
+        billboardShaderProgram_->setVec3("cameraUp", camUp);
+        billboardShaderProgram_->setVec2("scale", glm::vec2(reticleSize, reticleSize));
+        billboardShaderProgram_->setVec3("color", glm::vec3(1.0f, 0.0f, 0.0f));
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
+        glEnable(GL_DEPTH_TEST);
+        glBindVertexArray(0);
+    }
+
+    void HealthBarRenderer::RenderEnemyTargetGuide(const core::PlaneState& enemyState,
+                                                   const glm::mat4& projection,
+                                                   const glm::mat4& view) const
+    {
+        if (!enemyState.isAlive || guideVao_ == 0 || enemyGuideShaderProgram_ == 0)
+        {
+            return;
+        }
+
+        glm::vec3 guideWorldPos = enemyState.position + glm::vec3(0.0f, TARGET_GUIDE_OFFSET_Y, 0.0f);
+        glm::vec4 viewSpacePos = view * glm::vec4(guideWorldPos, 1.0f);
+        glm::vec4 clipPos = projection * viewSpacePos;
+        if (clipPos.w == 0.0f)
+        {
+            return;
+        }
+
+        bool behindCamera = viewSpacePos.z > 0.0f; // Positive z in view space means behind the camera
+
+        glm::vec3 ndc = glm::vec3(clipPos) / clipPos.w;
+        glm::vec2 dirFromCenter = behindCamera
+            ? glm::vec2(viewSpacePos) // Use view-space to keep vertical direction correct when behind
+            : glm::vec2(ndc);
+        if (glm::length(dirFromCenter) < 0.0001f)
+        {
+            dirFromCenter = glm::vec2(0.0f, 1.0f);
+        }
+        dirFromCenter = glm::normalize(dirFromCenter);
+
+        bool onScreen =
+            !behindCamera &&
+            ndc.x >= -1.0f && ndc.x <= 1.0f &&
+            ndc.y >= -1.0f && ndc.y <= 1.0f &&
+            ndc.z >= -1.0f && ndc.z <= 1.0f;
+
+        glm::vec2 indicatorNdc = glm::vec2(ndc);
+        if (!onScreen)
+        {
+            glm::vec2 clampedDir = dirFromCenter;
+            float maxAxis = (std::max)(std::abs(clampedDir.x), std::abs(clampedDir.y));
+            if (maxAxis < 0.0001f)
+            {
+                maxAxis = 1.0f;
+            }
+            clampedDir /= maxAxis;
+            indicatorNdc = clampedDir * TARGET_GUIDE_EDGE_PADDING;
+        }
+
+        float angle = std::atan2(dirFromCenter.y, dirFromCenter.x) - glm::half_pi<float>();
+        if (behindCamera)
+        {
+            angle += glm::pi<float>(); // Flip to point behind when enemy is behind the player
+        }
+        float size = onScreen ? TARGET_GUIDE_SIZE : TARGET_GUIDE_SIZE * 1.35f;
+
+        glm::mat4 transform = glm::mat4(1.0f);
+        transform = glm::translate(transform, glm::vec3(indicatorNdc, 0.0f));
+        transform = glm::rotate(transform, angle, glm::vec3(0.0f, 0.0f, 1.0f));
+        transform = glm::scale(transform, glm::vec3(size, size, 1.0f));
+
+        bool enemyInFront = viewSpacePos.z < 0.0f;
+
+        enemyGuideShaderProgram_->use();
+        enemyGuideShaderProgram_->setMat4("transform", transform);
+        glm::vec3 frontColor = onScreen ? glm::vec3(1.0f, 0.3f, 0.0f) : glm::vec3(1.0f, 1.0f, 0.0f);
+        glm::vec3 behindColor = glm::vec3(0.3f, 0.6f, 1.0f);
+        glm::vec3 color = enemyInFront ? frontColor : behindColor;
+        enemyGuideShaderProgram_->setVec3("color", color);
+
+        glBindVertexArray(guideVao_);
+        glDisable(GL_DEPTH_TEST);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
         glEnable(GL_DEPTH_TEST);
         glBindVertexArray(0);
     }
