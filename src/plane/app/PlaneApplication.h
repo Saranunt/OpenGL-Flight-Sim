@@ -75,8 +75,6 @@ namespace plane::app
             core::PlaneState state;
             core::CameraRig cameraRig;
             core::CameraController cameraController;
-            float fireCooldown { 0.0f };
-            float fireRatePerSec { 8.0f }; // bullets per second
         };
 
         GLFWwindow* window_ { nullptr };

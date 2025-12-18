@@ -127,13 +127,13 @@ namespace plane::app
             inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i],this->controller[i]);
 
             // Fire bullets at a rate-limited cadence while the fire key is held.
-            player.fireCooldown = std::max(0.0f, player.fireCooldown - timingState_.deltaTime);
+            player.state.fireCooldown = (std::max)(0.0f, player.state.fireCooldown - timingState_.deltaTime);
             int fireKeyState = glfwGetKey(window_, inputBindings_[i].fire);
             bool firePressed = (fireKeyState == GLFW_PRESS);
-            if (firePressed && player.fireCooldown <= 0.0f)
+            if (firePressed && player.state.fireCooldown <= 0.0f)
             {
                 shootingSystem_.FireBullet(player.state);
-                player.fireCooldown = (player.fireRatePerSec > 0.0f) ? (1.0f / player.fireRatePerSec) : 0.0f;
+                player.state.fireCooldown = (player.state.fireRatePerSec > 0.0f) ? (1.0f / player.state.fireRatePerSec) : 0.0f;
             }
 
             planeController_.UpdateFlightDynamics(player.state, timingState_.deltaTime);
@@ -308,7 +308,9 @@ namespace plane::app
         players_[0].state.speed = 5.0f;
         players_[0].state.health = 100.0f;
         players_[0].state.isAlive = true;
-        players_[0].fireCooldown = 0.0f;
+        players_[0].state.pitchInputTime = 0.0f;
+        players_[0].state.rollInputTime = 0.0f;
+        players_[0].state.fireCooldown = 0.0f;
         
         // Reset player 2
         players_[1].state.position = glm::vec3(-100.0f, 26.0f, 0.0f);
@@ -318,7 +320,9 @@ namespace plane::app
         players_[1].state.speed = 5.0f;
         players_[1].state.health = 100.0f;
         players_[1].state.isAlive = true;
-        players_[1].fireCooldown = 0.0f;
+        players_[1].state.pitchInputTime = 0.0f;
+        players_[1].state.rollInputTime = 0.0f;
+        players_[1].state.fireCooldown = 0.0f;
         
         // Reset camera positions
         for (auto& player : players_)
