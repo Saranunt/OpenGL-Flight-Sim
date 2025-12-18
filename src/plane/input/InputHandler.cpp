@@ -27,9 +27,9 @@ namespace plane::input
         float rollDelta = 0.0f;
         
         // For polling data from the Dualsense controller
-        simpleBluetoothPayload payload;
+        struct inputReportPayload payload;
         if (controller != NULL) {
-            payload = controller->getBTSimpleReport();
+            payload = controller->getInputReport(1);
         }
 
         // Track pitch input and calculate speed
@@ -72,8 +72,8 @@ namespace plane::input
                 rollDelta += currentSpeed * timingState.deltaTime;
             }
             else {
-                if (payload.analogLeftX <= 0x75 || payload.analogLeftX >= 0x85)
-                    rollDelta += currentSpeed * timingState.deltaTime * ((((payload.analogLeftX) / 255.0) - 0.5) * 2.0);
+                if (payload.analogRightX <= 0x75 || payload.analogRightX >= 0x85)
+                    rollDelta += currentSpeed * timingState.deltaTime * ((((payload.analogRightX) / 255.0) - 0.5) * 2.0);
             }
         }
         if (glfwGetKey(window, bindings.rollLeft) == GLFW_PRESS)
