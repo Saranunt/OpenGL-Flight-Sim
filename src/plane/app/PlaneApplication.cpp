@@ -121,13 +121,14 @@ namespace plane::app
             }
 
             inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i], plane_.get(), sendIn);
+            boosterSystem_.Update(player.state, timingState_.deltaTime);
              //Fire bullets at a rate-limited cadence while the fire key is held.
             player.state.fireCooldown = (std::max)(0.0f, player.state.fireCooldown - timingState_.deltaTime);
 
             bool firePressed = false;
             if (this->controller[i] != NULL) {
-                //if (payload.triggerRight >= 127)
-                //    firePressed = true;
+                if (payload.triggerRight >= 127)
+                    firePressed = true;
             }
             else {
                 int fireKeyState = glfwGetKey(window_, inputBindings_[i].fire);

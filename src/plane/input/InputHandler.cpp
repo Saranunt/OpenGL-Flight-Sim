@@ -188,6 +188,11 @@ namespace plane::input
         if (planeState.baseSpeed > 50.0f) planeState.baseSpeed = 50.0f;
 
         planeState.boostHeld = (glfwGetKey(window, bindings.boost) == GLFW_PRESS);
+        if (payload != NULL) {
+            if (payload->triggerLeft > 0x7F) {
+                planeState.boostHeld = planeState.boostHeld || true;
+            }
+        }
     }
 
     void InputHandler::OnMouseMove(double xposIn, double yposIn, core::CameraRig& cameraRig) const
