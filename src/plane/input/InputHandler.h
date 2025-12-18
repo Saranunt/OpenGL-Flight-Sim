@@ -5,6 +5,7 @@
 #include "core/CameraRig.h"
 #include "core/PlaneState.h"
 #include "core/Timing.h"
+#include "core/controller/Controller.hpp"
 
 namespace plane::input
 {
@@ -22,7 +23,7 @@ namespace plane::input
     class InputHandler
     {
     public:
-        void ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings) const;
+        void ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings, DualSense *controller) const;
         void OnMouseMove(double xposIn, double yposIn, core::CameraRig& cameraRig) const;
         void OnScroll(double yoffset, core::CameraRig& cameraRig) const;
     };

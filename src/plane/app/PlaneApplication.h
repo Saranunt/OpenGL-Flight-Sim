@@ -31,6 +31,8 @@
 #include "render/StartMenuRenderer.h"
 #include "render/TerrainPlane.h"
 #include "world/IslandManager.h"
+#include <hidapi/hidapi.h>
+#include "core/controller/Controller.hpp"
 
 namespace plane::app
 {
@@ -107,5 +109,6 @@ namespace plane::app
         
         core::GameState gameState_ { core::GameState::StartMenu };
         bool spacePressed_ { false };
+        DualSense* controller[2];
     };
 }

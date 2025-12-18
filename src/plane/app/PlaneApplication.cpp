@@ -22,7 +22,7 @@ namespace plane::app
             return false;
         }
 
-        if (!InitializeGlad())
+        if (!InitializeGlad()) 
         {
             return false;
         }
@@ -30,17 +30,52 @@ namespace plane::app
         stbi_set_flip_vertically_on_load(false);
         glEnable(GL_DEPTH_TEST);
 
+
+        // Dualsense controller initialization section
+        // This section of code nneed to be refactored in the future
+
+        this->controller[0] = NULL;
+        this->controller[1] = NULL;
+
+        hid_device_info* devList = hid_enumerate(SONY_INTERACTIVE_ENTERTAINMENT_VENDOR_ID,0);
+        hid_device_info* traverse = devList;
+
+
+        int controllerCount = 0;
+
+        while (traverse != NULL && controllerCount < 2) {
+            std::wcout << traverse->manufacturer_string << std::endl;
+            std::wcout << traverse->serial_number << std::endl;
+            this->controller[controllerCount] = new DualSense(traverse);
+            controllerCount++;
+            traverse = traverse->next;
+        }
+
+        if (this->controller[0] != NULL) {
+            this->controller[0]->enableLEDColor().setLEDColor(0, 255, 0).send();
+        }
+
         InitializeScene();
         return true;
     }
 
     void PlaneApplication::Run()
     {
+
+        struct simpleBluetoothPayload test1;
+        struct simpleBluetoothPayload test2;
+
+
         while (!glfwWindowShouldClose(window_))
         {
             float currentFrame = static_cast<float>(glfwGetTime());
             timingState_.deltaTime = currentFrame - timingState_.lastFrame;
             timingState_.lastFrame = currentFrame;
+
+            test1 = this->controller[0]->getBTSimpleReport();
+            test2 = this->controller[1]->getBTSimpleReport();
+
+            printf("c1X : %02X c1Y : %02X || c2X : %02X c2Y : %02X\n", test1.analogLeftX, test1.analogLeftY, test2.analogLeftX, test2.analogLeftY);
 
             // Handle input based on game state
             if (gameState_ == core::GameState::StartMenu)
@@ -89,7 +124,7 @@ namespace plane::app
         for (std::size_t i = 0; i < players_.size(); ++i)
         {
             auto& player = players_[i];
-            inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i]);
+            inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i],this->controller[i]);
 
             // Fire bullets at a rate-limited cadence while the fire key is held.
             player.fireCooldown = std::max(0.0f, player.fireCooldown - timingState_.deltaTime);

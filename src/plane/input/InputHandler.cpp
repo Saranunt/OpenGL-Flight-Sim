@@ -13,7 +13,7 @@ namespace plane::input
         constexpr float kAcceleration = 15.0f;  // units per second^2
     }
 
-    void InputHandler::ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings) const
+    void InputHandler::ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings, DualSense* controller) const
     {
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         {
@@ -26,15 +26,27 @@ namespace plane::input
         float yawDelta = 0.0f;
         float rollDelta = 0.0f;
         
+        // For polling data from the Dualsense controller
+        simpleBluetoothPayload payload;
+        if (controller != NULL) {
+            payload = controller->getBTSimpleReport();
+        }
+
         // Track pitch input and calculate speed
         bool pitchInputActive = false;
-        if (glfwGetKey(window, bindings.pitchUp) == GLFW_PRESS)
+        if (glfwGetKey(window, bindings.pitchUp) == GLFW_PRESS || controller != NULL)
         {
             pitchInputActive = true;
             planeState.pitchInputTime += timingState.deltaTime;
             float t = glm::clamp(planeState.pitchInputTime / kRotationAccelTime, 0.0f, 1.0f);
             float currentSpeed = glm::mix(kMinRotationSpeed, kMaxRotationSpeed_pitch, t);
-            pitchDelta += currentSpeed * timingState.deltaTime;
+            if (controller == NULL) {
+                pitchDelta += currentSpeed * timingState.deltaTime;
+            }
+            else  {
+                if(payload.analogLeftY <= 0x75 || payload.analogLeftY >= 0x85 )
+                    pitchDelta += currentSpeed * timingState.deltaTime * ((((payload.analogLeftY) / 255.0)-0.5)*-2.0);
+            }
         }
         if (glfwGetKey(window, bindings.pitchDown) == GLFW_PRESS)
         {
@@ -49,13 +61,20 @@ namespace plane::input
 
         // Track roll input and calculate speed
         bool rollInputActive = false;
-        if (glfwGetKey(window, bindings.rollRight) == GLFW_PRESS)
+        if (glfwGetKey(window, bindings.rollRight) == GLFW_PRESS || controller != NULL)
         {
             rollInputActive = true;
             planeState.rollInputTime += timingState.deltaTime;
             float t = glm::clamp(planeState.rollInputTime / kRotationAccelTime, 0.0f, 1.0f);
             float currentSpeed = glm::mix(kMinRotationSpeed, kMaxRotationSpeed, t);
-            rollDelta += currentSpeed * timingState.deltaTime;
+
+            if (controller == NULL) {
+                rollDelta += currentSpeed * timingState.deltaTime;
+            }
+            else {
+                if (payload.analogLeftX <= 0x75 || payload.analogLeftX >= 0x85)
+                    rollDelta += currentSpeed * timingState.deltaTime * ((((payload.analogLeftX) / 255.0) - 0.5) * 2.0);
+            }
         }
         if (glfwGetKey(window, bindings.rollLeft) == GLFW_PRESS)
         {
@@ -65,6 +84,11 @@ namespace plane::input
             float currentSpeed = glm::mix(kMinRotationSpeed, kMaxRotationSpeed, t);
             rollDelta -= currentSpeed * timingState.deltaTime;
         }
+        if (glfwGetKey(window, bindings.throttleUp) == GLFW_PRESS)
+            planeState.speed += kAcceleration * timingState.deltaTime;
+        if (glfwGetKey(window, bindings.throttleDown) == GLFW_PRESS)
+            planeState.speed -= kAcceleration * timingState.deltaTime;
+
         if (!rollInputActive)
             planeState.rollInputTime = 0.0f;
 
@@ -97,10 +121,7 @@ namespace plane::input
         // if (planeState.roll > 90.0f) planeState.roll = 90.0f;
         // if (planeState.roll < -90.0f) planeState.roll = -90.0f;
 
-        if (glfwGetKey(window, bindings.throttleUp) == GLFW_PRESS)
-            planeState.speed += kAcceleration * timingState.deltaTime;
-        if (glfwGetKey(window, bindings.throttleDown) == GLFW_PRESS)
-            planeState.speed -= kAcceleration * timingState.deltaTime;
+
 
         if (planeState.speed < 25.0f) planeState.speed = 25.0f;
         if (planeState.speed > 50.0f) planeState.speed = 50.0f;
