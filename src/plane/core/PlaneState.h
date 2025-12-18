@@ -35,5 +35,10 @@ namespace plane::core
         // Input acceleration tracking
         float pitchInputTime { 0.0f };  // Time pitch control has been held
         float rollInputTime { 0.0f };   // Time roll control has been held
+
+        // Firing cooldown state
+        float fireCooldown { 0.0f };
+        float fireRatePerSec { 8.0f }; // bullets per second
+
     };
 }

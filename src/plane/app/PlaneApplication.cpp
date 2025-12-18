@@ -22,7 +22,7 @@ namespace plane::app
             return false;
         }
 
-        if (!InitializeGlad())
+        if (!InitializeGlad()) 
         {
             return false;
         }
@@ -30,12 +30,44 @@ namespace plane::app
         stbi_set_flip_vertically_on_load(false);
         glEnable(GL_DEPTH_TEST);
 
+
+        // Dualsense controller initialization section
+        // This section of code nneed to be refactored in the future
+
+        this->controller[0] = NULL;
+        this->controller[1] = NULL;
+
+        hid_device_info* devList = hid_enumerate(SONY_INTERACTIVE_ENTERTAINMENT_VENDOR_ID,0);
+        hid_device_info* traverse = devList;
+
+
+        int controllerCount = 0;
+        while (traverse != NULL && controllerCount < 2) {
+            std::wcout << traverse->manufacturer_string << std::endl;
+            std::cout << traverse->path << std::endl;
+            this->controller[controllerCount] = new DualSense(traverse);
+            controllerCount++;
+            traverse = traverse->next;
+        }
+
+        if (this->controller[0] != NULL) {
+            this->controller[0]->setHapticLowPassFlag(true).setRumbleEmulationFlag(true).send();
+            this->controller[0]->enableLEDColor().setLEDColor(0, 0, 255).allowTriggerFFB(3).send();
+            this->controller[0]->setRightTriggerProperty().setLeftTriggerProperty().send();
+        }
+        if (this->controller[1] != NULL) {
+            this->controller[1]->setHapticLowPassFlag(true).setRumbleEmulationFlag(true).send();
+            this->controller[1]->enableLEDColor().setLEDColor(0, 255, 0).allowTriggerFFB(3).send();
+            this->controller[1]->setRightTriggerProperty().setLeftTriggerProperty().send();
+        }
+
         InitializeScene();
         return true;
     }
 
     void PlaneApplication::Run()
     {
+
         while (!glfwWindowShouldClose(window_))
         {
             float currentFrame = static_cast<float>(glfwGetTime());
@@ -86,20 +118,53 @@ namespace plane::app
 
     void PlaneApplication::Update()
     {
+        struct inputReportPayload payload;
+        struct inputReportPayload* sendIn;
+        bool isRumbleSet[2] = {false,false};
         for (std::size_t i = 0; i < players_.size(); ++i)
         {
             auto& player = players_[i];
-            inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i], plane_.get());
+            if (this->controller[i] != NULL) {
+                payload = this->controller[i]->getInputReport(1);
+                sendIn = &payload;
+            }
+            else {
+                sendIn = NULL;
+            }
+
+            inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i], plane_.get(), sendIn);
             boosterSystem_.Update(player.state, timingState_.deltaTime);
 
-            // Fire bullets at a rate-limited cadence while the fire key is held.
-            player.fireCooldown = (std::max)(0.0f, player.fireCooldown - timingState_.deltaTime);
-            int fireKeyState = glfwGetKey(window_, inputBindings_[i].fire);
-            bool firePressed = (fireKeyState == GLFW_PRESS);
-            if (firePressed && player.fireCooldown <= 0.0f)
+            if (player.state.isBoosting && player.state.boostHeld) {
+                if(this->controller[i] != NULL)
+                    this->controller[i]->setRumblePower(255, 255).send();
+            }
+            else {
+                if (this->controller[i] != NULL)
+                    this->controller[i]->setRumblePower(0, 0).send();
+            }
+
+
+             //Fire bullets at a rate-limited cadence while the fire key is held.
+            player.state.fireCooldown = (std::max)(0.0f, player.state.fireCooldown - timingState_.deltaTime);
+
+            bool firePressed = false;
+            if (this->controller[i] != NULL) {
+                if (payload.triggerRight >= 127)
+                    firePressed = true;
+            }
+            else {
+                int fireKeyState = glfwGetKey(window_, inputBindings_[i].fire);
+                firePressed = (fireKeyState == GLFW_PRESS);
+            }
+
+            if (firePressed && player.state.fireCooldown <= 0.0f)
             {
                 shootingSystem_.FireBullet(player.state);
-                player.fireCooldown = (player.fireRatePerSec > 0.0f) ? (1.0f / player.fireRatePerSec) : 0.0f;
+                player.state.fireCooldown = (player.state.fireRatePerSec > 0.0f) ? (1.0f / player.state.fireRatePerSec) : 0.0f;
+            }
+            else {
+                isRumbleSet[i] = false;
             }
 
             planeController_.UpdateFlightDynamics(player.state, timingState_.deltaTime);
@@ -125,6 +190,13 @@ namespace plane::app
         startMenuRenderer_.Shutdown();
         shadowMap_.Shutdown();
         skybox_.Shutdown();
+
+
+        if(this->controller[0] != NULL)
+            this->controller[0]->closeDualSense();
+        if (this->controller[1] != NULL)
+            this->controller[1]->closeDualSense();
+
         glfwTerminate();
     }
 
@@ -302,7 +374,7 @@ namespace plane::app
         players_[0].state.isAlive = true;
         players_[0].state.pitchInputTime = 0.0f;
         players_[0].state.rollInputTime = 0.0f;
-        players_[0].fireCooldown = 0.0f;
+        players_[0].state.fireCooldown = 0.0f;
         
         // Reset player 2
         players_[1].state.position = glm::vec3(-100.0f, 96.0f, 0.0f);
@@ -319,7 +391,7 @@ namespace plane::app
         players_[1].state.isAlive = true;
         players_[1].state.pitchInputTime = 0.0f;
         players_[1].state.rollInputTime = 0.0f;
-        players_[1].fireCooldown = 0.0f;
+        players_[1].state.fireCooldown = 0.0f;
         
         // Reset camera positions
         for (auto& player : players_)

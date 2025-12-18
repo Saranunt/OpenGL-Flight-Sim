@@ -5,6 +5,9 @@
 #include "core/CameraRig.h"
 #include "core/PlaneState.h"
 #include "core/Timing.h"
+#include "core/controller/Controller.hpp"
+
+namespace plane::app { class Plane; }
 
 namespace plane::app { class Plane; }
 
@@ -25,7 +28,7 @@ namespace plane::input
     class InputHandler
     {
     public:
-        void ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings, plane::app::Plane* plane = nullptr) const;
+        void ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings, plane::app::Plane* plane = nullptr, struct inputReportPayload* payload = nullptr) const;
         void OnMouseMove(double xposIn, double yposIn, core::CameraRig& cameraRig) const;
         void OnScroll(double yoffset, core::CameraRig& cameraRig) const;
     };
