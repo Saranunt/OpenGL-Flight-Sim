@@ -51,11 +51,19 @@ namespace plane::render
                      const glm::mat4& projection,
                      const glm::mat4& view) const;
 
+        // Render an on-screen/off-screen enemy target guide arrow
+        void RenderEnemyTargetGuide(const core::PlaneState& enemyState,
+                        const glm::mat4& projection,
+                        const glm::mat4& view) const;
+
     private:
         unsigned int barVao_ { 0 };
         unsigned int barVbo_ { 0 };
+        unsigned int guideVao_ { 0 };
+        unsigned int guideVbo_ { 0 };
         std::unique_ptr<Shader> uiShaderProgram_;
         std::unique_ptr<Shader> billboardShaderProgram_;
+        std::unique_ptr<Shader> enemyGuideShaderProgram_;
         
         void CreateShaders();
         
@@ -67,5 +75,10 @@ namespace plane::render
         static constexpr float BILLBOARD_WIDTH = 3.0f;   // World units
         static constexpr float BILLBOARD_HEIGHT = 0.4f;  // World units
         static constexpr float BILLBOARD_OFFSET_Y = 5.0f; // Above plane
+
+        // Enemy guide arrow constants
+        static constexpr float TARGET_GUIDE_OFFSET_Y = 6.0f;   // Above enemy plane
+        static constexpr float TARGET_GUIDE_SIZE = 0.05f;      // NDC scale
+        static constexpr float TARGET_GUIDE_EDGE_PADDING = 0.9f;
     };
 }
