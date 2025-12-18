@@ -81,16 +81,30 @@ class DualSense{
         DualSense(hid_device_info *openDeviceInfo);
 
         ~DualSense(){
+
+
+            // Controller Reset sequence (for USB only!)
+            std::memset(this->outputReportPayload, 0, sizeof(struct setStatePayload));
+            this->send();
+
             free((void *) this->inputReport);
             free((void *) this->simpleBTInputReport);
+            free((void*)this->outputReportPayload);
+            free((void*)this->usbInputReport);
             hid_close(this->dev);
         }
 
     public:
+
+        void    closeDualSense(void);
+
         struct inputReportPayload getInputReport(uint8_t isUSB);
         struct simpleBluetoothPayload getBTSimpleReport();
 
-        DualSense& enableRumbleEmulation(void);
+        DualSense& setRumbleEmulationFlag(bool flag);
+        DualSense& setHapticLowPassFlag(bool flag);
+        DualSense& setAllowMotorPowerReductionFlag(bool flag);
+
         DualSense& allowTriggerFFB(uint8_t flag);
         DualSense& enableLEDColor(void);
         DualSense& ResetLights(void);
@@ -98,6 +112,8 @@ class DualSense{
         DualSense& setRumblePower(uint8_t left, uint8_t right);
         DualSense& setHapticFeedBack(uint8_t left, uint8_t right);
         DualSense& setMotorPowerReduction(uint8_t reductionFactor,uint8_t useRumbleNotHaptic);
+        DualSense& setRightTriggerProperty();
+        DualSense& setLeftTriggerProperty();
         DualSense& setLEDColor(uint8_t r, uint8_t g, uint8_t b);
         DualSense& send(void);
 };

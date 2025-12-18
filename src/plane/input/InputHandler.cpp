@@ -82,7 +82,7 @@ namespace plane::input
                 rollDelta += currentSpeed * timingState.deltaTime;
             }
             else {
-                if (payload->analogRightX <= 0x75 || payload->analogRightX >= 0x85)
+                //if (payload->analogRightX <= 0x75 || payload->analogRightX >= 0x85)
                     rollDelta += currentSpeed * timingState.deltaTime * ((((payload->analogRightX) / 255.0) - 0.5) * 2.0);
             }
         }
@@ -108,7 +108,7 @@ namespace plane::input
         // Apply pitch and yaw with roll compensation
         // When rolled, pitch input should affect both pitch and yaw
         float rollRad = glm::radians(planeState.roll);
-        
+         
         // Reduce pitch effect as roll approaches ±90°
         // Use max(0.1, cos(abs(roll))) to clamp minimum at 0.1
         float cosAbsRoll = std::abs(std::cos(rollRad));
@@ -149,8 +149,17 @@ namespace plane::input
 
             // Targets (radians)
             float tailTarget = 0.0f;
-            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-                tailTarget = glm::radians(kMaxTailAngleDeg);    // up to +30°
+            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS || payload != NULL) {
+                if (payload == NULL) {
+                    tailTarget = glm::radians(kMaxTailAngleDeg);    // up to +30°
+                }
+                else {
+                    if (payload->analogLeftY <= 0x75 || payload->analogLeftY >= 0x85) {
+                        float mappedTailAngle = ((payload->analogLeftY/255.0)*90.0)-45.0;
+                        tailTarget = glm::radians(kMaxTailAngleDeg);
+                    }
+                }
+            }
             else if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
                 tailTarget = glm::radians(-kMaxTailAngleDeg);   // down to -30°
 

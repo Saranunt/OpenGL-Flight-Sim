@@ -37,6 +37,25 @@ DualSense::DualSense(hid_device_info *openDeviceInfo){
     std::memset(this->outputReportPayload,0,sizeof(struct setStatePayload));
 }
 
+
+void DualSense::closeDualSense(void) {
+    // Controller Reset sequence (for USB only!)
+    this->outputReportPayload->allowLEDColor = 0;
+    for (int i = 0; i < 11; i++) {
+        this->outputReportPayload->leftTriggerFFB[i] = 0;
+        this->outputReportPayload->rightTriggerFFB[i] = 0;
+    }
+    this->send();
+
+    free((void*)this->inputReport);
+    free((void*)this->simpleBTInputReport);
+    free((void*)this->outputReportPayload);
+    free((void*)this->usbInputReport);
+
+    hid_close(this->dev);
+}
+
+
 struct inputReportPayload DualSense::getInputReport(uint8_t isUSB){
     if (isUSB == 1) {
         this->usbInputReport->reportID = 0x01;
@@ -58,10 +77,21 @@ struct simpleBluetoothPayload DualSense::getBTSimpleReport(){
 
 
 
-DualSense& DualSense::enableRumbleEmulation(void){
-    this->outputReportPayload->enableRumbleEmulation = 1;
+DualSense& DualSense::setRumbleEmulationFlag(bool flag) {
+    this->outputReportPayload->enableRumbleEmulation = flag;
     return *this;    
 }
+
+DualSense& DualSense::setHapticLowPassFlag(bool flag) {
+    this->outputReportPayload->allowHapticLowpassFilter = flag;
+    return *this;
+}
+
+DualSense& DualSense::setAllowMotorPowerReductionFlag(bool flag) {
+    this->outputReportPayload->motorLevelPowerReduction = flag;
+    return *this;
+}
+
 DualSense& DualSense::allowTriggerFFB(uint8_t flag){
     if (flag == 1) {
         this->outputReportPayload->allowLeftTriggerFFB = 1;
@@ -108,11 +138,59 @@ DualSense& DualSense::setLEDColor(uint8_t r, uint8_t g, uint8_t b){
     return *this;    
 }
 
+DualSense& DualSense::setRightTriggerProperty() {
+    uint8_t strengthValue = (uint8_t)((8 - 1) & 0x07);
+    uint32_t amplitudeZones = 0;
+    uint16_t activeZones = 0;
+    for (int i = 4; i < 10; i++)
+    {
+        amplitudeZones |= (uint32_t)(strengthValue << (3 * i));
+        activeZones |= (uint16_t)(1 << i);
+    }
+    
+    this->outputReportPayload->rightTriggerFFB[0] = 0x26;
+    this->outputReportPayload->rightTriggerFFB[1] = (uint8_t)((activeZones >> 0) & 0xff);
+    this->outputReportPayload->rightTriggerFFB[2] = (uint8_t)((activeZones >> 8) & 0xff);
+    this->outputReportPayload->rightTriggerFFB[3] = (uint8_t)((amplitudeZones >> 0) & 0xff);
+    this->outputReportPayload->rightTriggerFFB[4] = (uint8_t)((amplitudeZones >> 8) & 0xff);
+    this->outputReportPayload->rightTriggerFFB[5] = (uint8_t)((amplitudeZones >> 16) & 0xff);
+    this->outputReportPayload->rightTriggerFFB[6] = (uint8_t)((amplitudeZones >> 24) & 0xff);
+    this->outputReportPayload->rightTriggerFFB[7] = 0x00; 
+    this->outputReportPayload->rightTriggerFFB[8] = 0x00; 
+    this->outputReportPayload->rightTriggerFFB[9] = 8;
+    this->outputReportPayload->rightTriggerFFB[10] = 0x00;
+    return *this;
+}
+
+DualSense& DualSense::setLeftTriggerProperty() {
+    uint8_t     forceValue = (uint8_t)((4 - 1) & 0x07);
+    uint32_t    forceZones = 0;
+    uint16_t    activeZones = 0;
+    for (int i = 4; i < 10; i++)
+    {
+        forceZones |= (uint32_t)(forceValue << (3 * i));
+        activeZones |= (uint16_t)(1 << i);
+    }
+
+    
+    this->outputReportPayload->leftTriggerFFB[0] = 0x21;
+    this->outputReportPayload->leftTriggerFFB[1] = (uint8_t)((activeZones >> 0) & 0xff);
+    this->outputReportPayload->leftTriggerFFB[2] = (uint8_t)((activeZones >> 8) & 0xff);
+    this->outputReportPayload->leftTriggerFFB[3] = (uint8_t)((forceZones >> 0) & 0xff);
+    this->outputReportPayload->leftTriggerFFB[4] = (uint8_t)((forceZones >> 8) & 0xff);
+    this->outputReportPayload->leftTriggerFFB[5] = (uint8_t)((forceZones >> 16) & 0xff);
+    this->outputReportPayload->leftTriggerFFB[6] = (uint8_t)((forceZones >> 24) & 0xff);
+    this->outputReportPayload->leftTriggerFFB[7] = 0x00; // (byte)((forceZones >> 32) & 0xff); // need 64bit for this, but we already have enough space
+    this->outputReportPayload->leftTriggerFFB[8] = 0x00; // (byte)((forceZones >> 40) & 0xff); // need 64bit for this, but we already have enough space
+    this->outputReportPayload->leftTriggerFFB[9] = 0x00;
+    this->outputReportPayload->leftTriggerFFB[10] = 0x00;
+    return *this;
+}
+
 DualSense& DualSense::send(void){
     struct outputReportPacketUsb packet;
     packet.reportID = 0x02;
     std::memcpy(&(packet.payload), this->outputReportPayload, sizeof(struct setStatePayload));
     int retVal = hid_write(this->dev, (unsigned char*)(&packet), sizeof(struct outputReportPacketUsb));
-    std::cout << retVal << std::endl;
     return *this;
 }

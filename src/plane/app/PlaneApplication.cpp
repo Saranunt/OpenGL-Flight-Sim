@@ -50,6 +50,17 @@ namespace plane::app
             traverse = traverse->next;
         }
 
+        if (this->controller[0] != NULL) {
+            this->controller[0]->setHapticLowPassFlag(true).setRumbleEmulationFlag(true).send();
+            this->controller[0]->enableLEDColor().setLEDColor(0, 0, 255).allowTriggerFFB(3).send();
+            this->controller[0]->setRightTriggerProperty().setLeftTriggerProperty().send();
+        }
+        if (this->controller[1] != NULL) {
+            this->controller[1]->setHapticLowPassFlag(true).setRumbleEmulationFlag(true).send();
+            this->controller[1]->enableLEDColor().setLEDColor(0, 255, 0).allowTriggerFFB(3).send();
+            this->controller[1]->setRightTriggerProperty().setLeftTriggerProperty().send();
+        }
+
         InitializeScene();
         return true;
     }
@@ -109,6 +120,7 @@ namespace plane::app
     {
         struct inputReportPayload payload;
         struct inputReportPayload* sendIn;
+        bool isRumbleSet[2] = {false,false};
         for (std::size_t i = 0; i < players_.size(); ++i)
         {
             auto& player = players_[i];
@@ -122,6 +134,18 @@ namespace plane::app
 
             inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i], plane_.get(), sendIn);
             boosterSystem_.Update(player.state, timingState_.deltaTime);
+
+            std::cout << timingState_.deltaTime << std::endl;
+
+            if (player.state.isBoosting && player.state.boostHeld) {
+                this->controller[i]->setRumblePower(255, 255).send();
+            }
+            else {
+                this->controller[i]->setRumblePower(0, 0).send();
+                isRumbleSet[i] = false;
+            }
+
+
              //Fire bullets at a rate-limited cadence while the fire key is held.
             player.state.fireCooldown = (std::max)(0.0f, player.state.fireCooldown - timingState_.deltaTime);
 
@@ -139,6 +163,9 @@ namespace plane::app
             {
                 shootingSystem_.FireBullet(player.state);
                 player.state.fireCooldown = (player.state.fireRatePerSec > 0.0f) ? (1.0f / player.state.fireRatePerSec) : 0.0f;
+            }
+            else {
+                isRumbleSet[i] = false;
             }
 
             planeController_.UpdateFlightDynamics(player.state, timingState_.deltaTime);
@@ -164,6 +191,10 @@ namespace plane::app
         startMenuRenderer_.Shutdown();
         shadowMap_.Shutdown();
         skybox_.Shutdown();
+
+        this->controller[0]->closeDualSense();
+        this->controller[1]->closeDualSense();
+
         glfwTerminate();
     }
 
