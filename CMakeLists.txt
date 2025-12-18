@@ -74,9 +74,25 @@ set(LIBS ${LIBS} STB_IMAGE)
 add_library(GLAD "src/glad.c" "src/plane/core/controller/Controller.cpp" "src/plane/core/controller/dualsenseController.cpp")
 set(LIBS ${LIBS} GLAD)
 
-add_library(HIDAPI  "includes/hidapi/hid.c" "src/plane/core/controller/Controller.cpp" "src/plane/core/controller/dualsenseController.cpp")
-target_include_directories(HIDAPI PUBLIC ${CMAKE_SOURCE_DIR}/includes)
-set(LIBS ${LIBS} HIDAPI)
+if(WIN32)
+  add_library(HIDAPI  "includes/hidapi/hid.c" "src/plane/core/controller/Controller.cpp" "src/plane/core/controller/dualsenseController.cpp")
+  target_include_directories(HIDAPI PUBLIC ${CMAKE_SOURCE_DIR}/includes)
+  set(LIBS ${LIBS} HIDAPI)
+
+elseif(APPLE)
+  # On macOS, use the Homebrew-installed HIDAPI via pkg-config
+  find_package(PkgConfig REQUIRED)
+  # Homebrew HIDAPI provides a pkg-config module usually named "hidapi"
+  pkg_check_modules(HIDAPI_PC REQUIRED hidapi)
+  # Create an imported target for convenience
+  add_library(HIDAPI::hidapi INTERFACE IMPORTED)
+  target_include_directories(HIDAPI::hidapi INTERFACE ${HIDAPI_PC_INCLUDE_DIRS})
+  target_link_directories(HIDAPI::hidapi INTERFACE ${HIDAPI_PC_LIBRARY_DIRS})
+  target_link_libraries(HIDAPI::hidapi INTERFACE ${HIDAPI_PC_LIBRARIES})
+  target_compile_options(HIDAPI::hidapi INTERFACE ${HIDAPI_PC_CFLAGS_OTHER})
+  # Use it in your global libs list
+  set(LIBS ${LIBS} HIDAPI::hidapi)
+endif(WIN32)
 
 macro(makeLink src dest target)
   add_custom_command(TARGET ${target} POST_BUILD COMMAND ${CMAKE_COMMAND} -E create_symlink ${src} ${dest}  DEPENDS  ${dest} COMMENT "mklink ${src} -> ${dest}")
