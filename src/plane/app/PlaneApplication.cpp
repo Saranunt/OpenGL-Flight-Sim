@@ -13,7 +13,6 @@
 
 namespace plane::app
 {
-    PlaneApplication* PlaneApplication::s_instance_ = nullptr;
 
     bool PlaneApplication::Initialize()
     {
@@ -132,7 +131,7 @@ namespace plane::app
                 sendIn = NULL;
             }
 
-            inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i], plane_.get(), sendIn);
+            inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i], planes_[i].get(), sendIn);
             boosterSystem_.Update(player.state, timingState_.deltaTime);
 
             if (player.state.isBoosting && player.state.boostHeld) {
@@ -229,7 +228,6 @@ namespace plane::app
         glfwSetScrollCallback(window_, ScrollCallback);
         glfwSetInputMode(window_, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         glfwSetWindowUserPointer(window_, this);
-        s_instance_ = this;
 
         return true;
     }
@@ -251,10 +249,15 @@ namespace plane::app
         shadowShader_ = std::make_unique<Shader>("shadow_depth.vs", "shadow_depth.fs");
         skyboxShader_ = std::make_unique<Shader>("skybox.vs", "skybox.fs");
 
-        plane_ = std::make_unique<Plane>();
-        if (!plane_->LoadModels())
+        planes_[0] = std::make_unique<Plane>();
+        planes_[1] = std::make_unique<Plane>();
+        if (!planes_[0]->LoadModels())
         {
-            std::cout << "Failed to load one or more plane parts from plane2/ folder" << std::endl;
+            std::cout << "Failed to load one or more plane parts for player 1 from plane2/ folder" << std::endl;
+        }
+        if (!planes_[1]->LoadModels())
+        {
+            std::cout << "Failed to load one or more plane parts for player 2 from plane2/ folder" << std::endl;
         }
 
         islandModel_ = std::make_unique<Model>(FileSystem::getPath("resources/objects/island4/Untitled.dae"));
@@ -405,6 +408,10 @@ namespace plane::app
             player.cameraRig.firstMouse = true;
         }
         
+        // Reset plane part transforms
+        if (planes_[0]) planes_[0]->ResetAllTransforms();
+        if (planes_[1]) planes_[1]->ResetAllTransforms();
+
         // Clear bullets by reinitializing shooting system
         shootingSystem_ = features::shooting::ShootingSystem();
         shootingSystem_.Initialize();
@@ -561,10 +568,11 @@ namespace plane::app
         // Draw order keeps the large ground first so depth testing is stable.
         groundPlane_.Draw(shader, bindTextures);
         terrainPlane_.Draw(shader, bindTextures);  // Use heightmap terrain instead of island models
-        for (const auto& player : players_)
-        {   
-            if (player.state.isAlive && plane_)
-                planeRenderer_.Draw(*plane_, shader, player.state);
+        for (std::size_t i = 0; i < players_.size(); ++i)
+        {
+            const auto& player = players_[i];
+            if (player.state.isAlive && planes_[i])
+                planeRenderer_.Draw(*planes_[i], shader, player.state);
         }
     }
 
