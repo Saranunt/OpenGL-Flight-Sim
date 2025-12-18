@@ -20,6 +20,12 @@ namespace plane::input
         int throttleDown { GLFW_KEY_X };
         int boost { GLFW_KEY_LEFT_SHIFT };
         int fire { GLFW_KEY_SPACE };
+
+        // Control-surface animation bindings (per player)
+        int tailUp { GLFW_KEY_S };      // tail tilts up (nose down)
+        int tailDown { GLFW_KEY_W };    // tail tilts down (nose up)
+        int flapRightDown { GLFW_KEY_A }; // right flap down
+        int flapLeftDown { GLFW_KEY_D };  // left flap down
     };
 
     class InputHandler

@@ -228,7 +228,11 @@ namespace plane::app
             GLFW_KEY_RIGHT_SHIFT,
             GLFW_KEY_RIGHT_CONTROL,
             GLFW_KEY_BACKSPACE,
-            GLFW_KEY_ENTER
+            GLFW_KEY_ENTER,
+            GLFW_KEY_DOWN,   // tailUp
+            GLFW_KEY_UP,     // tailDown
+            GLFW_KEY_LEFT,   // flapRightDown
+            GLFW_KEY_RIGHT   // flapLeftDown
         };
 
         for (auto& player : players_)

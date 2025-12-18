@@ -122,43 +122,38 @@ namespace plane::input
         // Optional per-part transforms when a plane pointer is provided.
         if (plane)
         {
-            // Persistent angles for smooth motion (radians)
-            static float tailAngle = 0.0f;
-            static float flapRAngle = 0.0f;
-            static float flapLAngle = 0.0f;
-
             // Targets (radians)
             float tailTarget = 0.0f;
-            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            if (glfwGetKey(window, bindings.tailUp) == GLFW_PRESS)
                 tailTarget = glm::radians(kMaxTailAngleDeg);    // up to +30°
-            else if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            else if (glfwGetKey(window, bindings.tailDown) == GLFW_PRESS)
                 tailTarget = glm::radians(-kMaxTailAngleDeg);   // down to -30°
 
             float flapRTarget = 0.0f;
-            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            if (glfwGetKey(window, bindings.flapLeftDown) == GLFW_PRESS)
                 flapRTarget = glm::radians(-kMaxFlapAngleDeg);  // right flap down 30°
 
             float flapLTarget = 0.0f;
-            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            if (glfwGetKey(window, bindings.flapRightDown) == GLFW_PRESS)
                 flapLTarget = glm::radians(-kMaxFlapAngleDeg);  // left flap down 30°
 
             // Approach targets smoothly
             const float tailStepMax = glm::radians(kTailMoveSpeedDeg) * timingState.deltaTime;
             const float flapStepMax = glm::radians(kFlapMoveSpeedDeg) * timingState.deltaTime;
 
-            float newTailAngle = MoveTowards(tailAngle, tailTarget, tailStepMax);
-            float newFlapRAngle = MoveTowards(flapRAngle, flapRTarget, flapStepMax);
-            float newFlapLAngle = MoveTowards(flapLAngle, flapLTarget, flapStepMax);
+            float newTailAngle = MoveTowards(planeState.tailAngle, tailTarget, tailStepMax);
+            float newFlapRAngle = MoveTowards(planeState.flapRAngle, flapRTarget, flapStepMax);
+            float newFlapLAngle = MoveTowards(planeState.flapLAngle, flapLTarget, flapStepMax);
 
             // Apply deltas around X axis
-            plane->RotatePart(plane::app::Plane::Part::Tail,  glm::vec3(1.0f, 0.0f, 0.0f), newTailAngle - tailAngle);
-            plane->RotatePart(plane::app::Plane::Part::FlapR, glm::vec3(1.0f, 0.0f, 0.0f), newFlapRAngle - flapRAngle);
-            plane->RotatePart(plane::app::Plane::Part::FlapL, glm::vec3(1.0f, 0.0f, 0.0f), newFlapLAngle - flapLAngle);
+            plane->RotatePart(plane::app::Plane::Part::Tail,  glm::vec3(1.0f, 0.0f, 0.0f), newTailAngle - planeState.tailAngle);
+            plane->RotatePart(plane::app::Plane::Part::FlapR, glm::vec3(1.0f, 0.0f, 0.0f), newFlapRAngle - planeState.flapRAngle);
+            plane->RotatePart(plane::app::Plane::Part::FlapL, glm::vec3(1.0f, 0.0f, 0.0f), newFlapLAngle - planeState.flapLAngle);
 
-            // Update stored angles
-            tailAngle = newTailAngle;
-            flapRAngle = newFlapRAngle;
-            flapLAngle = newFlapLAngle;
+            // Update stored angles in planeState
+            planeState.tailAngle = newTailAngle;
+            planeState.flapRAngle = newFlapRAngle;
+            planeState.flapLAngle = newFlapLAngle;
 
             // Always spin blade around Z
             const float bladeStep = glm::radians(360.0f) * timingState.deltaTime * 1.5f;
