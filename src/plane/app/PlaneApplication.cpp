@@ -217,7 +217,7 @@ namespace plane::app
     void PlaneApplication::InitializePlayers()
     {
         players_[0].state.position = glm::vec3(100.0f, 26.0f, 0.0f);
-        players_[1].state.position = glm::vec3(-100.0f, 26.0f, 0.0f);
+        players_[1].state.position = glm::vec3(-100.0f, 96.0f, 0.0f);
 
         inputBindings_[0] = input::InputBindings{};
         inputBindings_[1] = input::InputBindings{
@@ -305,7 +305,7 @@ namespace plane::app
         players_[0].fireCooldown = 0.0f;
         
         // Reset player 2
-        players_[1].state.position = glm::vec3(-100.0f, 26.0f, 0.0f);
+        players_[1].state.position = glm::vec3(-100.0f, 96.0f, 0.0f);
         players_[1].state.pitch = 0.0f;
         players_[1].state.yaw = 0.0f;
         players_[1].state.roll = 0.0f;
@@ -392,6 +392,7 @@ namespace plane::app
             // Render enemy health bar above enemy plane
             size_t enemyIdx = (i == 0) ? 1 : 0;
             healthBarRenderer_.RenderEnemyHealthBar(players_[enemyIdx].state, projection, view, players_[i].cameraRig.camera.Position);
+            healthBarRenderer_.RenderEnemyTargetGuide(players_[enemyIdx].state, projection, view);
         }
 
         // Draw a simple vertical divider between the two viewports.
