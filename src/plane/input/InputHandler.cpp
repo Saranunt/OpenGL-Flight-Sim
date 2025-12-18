@@ -13,7 +13,7 @@ namespace plane::input
         constexpr float kAcceleration = 15.0f;  // units per second^2
     }
 
-    void InputHandler::ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings, DualSense* controller) const
+    void InputHandler::ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState,const InputBindings& bindings, struct inputReportPayload* payload) const
     {
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         {
@@ -27,25 +27,21 @@ namespace plane::input
         float rollDelta = 0.0f;
         
         // For polling data from the Dualsense controller
-        struct inputReportPayload payload;
-        if (controller != NULL) {
-            payload = controller->getInputReport(1);
-        }
 
         // Track pitch input and calculate speed
         bool pitchInputActive = false;
-        if (glfwGetKey(window, bindings.pitchUp) == GLFW_PRESS || controller != NULL)
+        if (glfwGetKey(window, bindings.pitchUp) == GLFW_PRESS || payload != NULL)
         {
             pitchInputActive = true;
             planeState.pitchInputTime += timingState.deltaTime;
             float t = glm::clamp(planeState.pitchInputTime / kRotationAccelTime, 0.0f, 1.0f);
             float currentSpeed = glm::mix(kMinRotationSpeed, kMaxRotationSpeed_pitch, t);
-            if (controller == NULL) {
+            if (payload == NULL) {
                 pitchDelta += currentSpeed * timingState.deltaTime;
             }
             else  {
-                if(payload.analogLeftY <= 0x75 || payload.analogLeftY >= 0x85 )
-                    pitchDelta += currentSpeed * timingState.deltaTime * ((((payload.analogLeftY) / 255.0)-0.5)*-2.0);
+                if(payload->analogLeftY <= 0x75 || payload->analogLeftY >= 0x85 )
+                    pitchDelta += currentSpeed * timingState.deltaTime * ((((payload->analogLeftY) / 255.0)-0.5)*-2.0);
             }
         }
         if (glfwGetKey(window, bindings.pitchDown) == GLFW_PRESS)
@@ -61,19 +57,19 @@ namespace plane::input
 
         // Track roll input and calculate speed
         bool rollInputActive = false;
-        if (glfwGetKey(window, bindings.rollRight) == GLFW_PRESS || controller != NULL)
+        if (glfwGetKey(window, bindings.rollRight) == GLFW_PRESS || payload != NULL)
         {
             rollInputActive = true;
             planeState.rollInputTime += timingState.deltaTime;
             float t = glm::clamp(planeState.rollInputTime / kRotationAccelTime, 0.0f, 1.0f);
             float currentSpeed = glm::mix(kMinRotationSpeed, kMaxRotationSpeed, t);
 
-            if (controller == NULL) {
+            if (payload == NULL) {
                 rollDelta += currentSpeed * timingState.deltaTime;
             }
             else {
-                if (payload.analogRightX <= 0x75 || payload.analogRightX >= 0x85)
-                    rollDelta += currentSpeed * timingState.deltaTime * ((((payload.analogRightX) / 255.0) - 0.5) * 2.0);
+                if (payload->analogRightX <= 0x75 || payload->analogRightX >= 0x85)
+                    rollDelta += currentSpeed * timingState.deltaTime * ((((payload->analogRightX) / 255.0) - 0.5) * 2.0);
             }
         }
         if (glfwGetKey(window, bindings.rollLeft) == GLFW_PRESS)

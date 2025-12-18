@@ -75,7 +75,7 @@ class DualSense{
         struct usbInputReport                   *usbInputReport;
         struct bluetoothFullInputReportPacket   *inputReport;
         struct simpleBluetoothPacket            *simpleBTInputReport;
-        struct outputReportBT                   *outputReportBT;
+        struct setStatePayload                  *outputReportPayload;
     
     public :
         DualSense(hid_device_info *openDeviceInfo);
@@ -90,32 +90,6 @@ class DualSense{
         struct inputReportPayload getInputReport(uint8_t isUSB);
         struct simpleBluetoothPayload getBTSimpleReport();
 
-        //void sendOuputReportTest(){
-        //    this->outputReportBT->Data.reportId = 0x31;
-        //    this->outputReportBT->Data.payload.allowLEDColor = 1;
-        //    this->outputReportBT->Data.payload.ledR = 219;
-        //    this->outputReportBT->Data.payload.ledG = 22;
-        //    this->outputReportBT->Data.payload.ledB = 22;
-        //    this->outputReportBT->Data.enableHID = 1;
-        //    this->outputReportBT->Data.payload.enableRumbleEmulation = 1;
-        //    this->outputReportBT->Data.payload.useRumbleNotHaptics = 1;
-        //    this->outputReportBT->Data.payload.rumbleEmulationLeft  = 127;
-        //    this->outputReportBT->Data.payload.rumbleEmulationRight = 127;
-        //    
-        //    const uint8_t seed = 0xA2; 
-        //    uint32_t crc = crc32(0, &seed, 1); // report buffer doesn't start with type, preheat manually
-        //    crc = crc32(crc, this->outputReportBT->crc.dataBuffer, sizeof(this->outputReportBT->crc.dataBuffer)); // compute plain boring crc
-
-        //    this->outputReportBT->crc.crc = crc;
-        //    printf("\n\nCRC      = 0x%x\n",crc);
-        //    printf("\n\nCRC_SEND = 0x%x\n",this->outputReportBT->crc.crc);
-        //    int numByteSend;
-
-        //    numByteSend = hid_send_output_report(this->dev,(unsigned char*)this->outputReportBT,sizeof(struct outputReportBT));
-        //    std::cout << "Send byte = " << numByteSend << std::endl;
-        //    printf("\n%ld\n",sizeof(this->outputReportBT->Data));
-        //    
-        //} 
         DualSense& enableRumbleEmulation(void);
         DualSense& allowTriggerFFB(uint8_t flag);
         DualSense& enableLEDColor(void);

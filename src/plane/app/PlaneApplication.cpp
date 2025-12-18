@@ -42,17 +42,12 @@ namespace plane::app
 
 
         int controllerCount = 0;
-
         while (traverse != NULL && controllerCount < 2) {
             std::wcout << traverse->manufacturer_string << std::endl;
-            std::wcout << traverse->serial_number << std::endl;
+            std::cout << traverse->path << std::endl;
             this->controller[controllerCount] = new DualSense(traverse);
             controllerCount++;
             traverse = traverse->next;
-        }
-
-        if (this->controller[0] != NULL) {
-            this->controller[0]->enableLEDColor().setLEDColor(0, 255, 0).send();
         }
 
         InitializeScene();
@@ -62,20 +57,11 @@ namespace plane::app
     void PlaneApplication::Run()
     {
 
-        struct simpleBluetoothPayload test1;
-        struct simpleBluetoothPayload test2;
-
-
         while (!glfwWindowShouldClose(window_))
         {
             float currentFrame = static_cast<float>(glfwGetTime());
             timingState_.deltaTime = currentFrame - timingState_.lastFrame;
             timingState_.lastFrame = currentFrame;
-
-            test1 = this->controller[0]->getBTSimpleReport();
-            test2 = this->controller[1]->getBTSimpleReport();
-
-            printf("c1X : %02X c1Y : %02X || c2X : %02X c2Y : %02X\n", test1.analogLeftX, test1.analogLeftY, test2.analogLeftX, test2.analogLeftY);
 
             // Handle input based on game state
             if (gameState_ == core::GameState::StartMenu)
@@ -121,15 +107,33 @@ namespace plane::app
 
     void PlaneApplication::Update()
     {
+        struct inputReportPayload payload;
+        struct inputReportPayload* sendIn;
         for (std::size_t i = 0; i < players_.size(); ++i)
         {
             auto& player = players_[i];
-            inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i],this->controller[i]);
+            if (this->controller[i] != NULL) {
+                payload = this->controller[i]->getInputReport(1);
+                sendIn = &payload;
+            }
+            else {
+                sendIn = NULL;
+            }
 
-            // Fire bullets at a rate-limited cadence while the fire key is held.
+            inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i], sendIn);
+             //Fire bullets at a rate-limited cadence while the fire key is held.
             player.state.fireCooldown = (std::max)(0.0f, player.state.fireCooldown - timingState_.deltaTime);
-            int fireKeyState = glfwGetKey(window_, inputBindings_[i].fire);
-            bool firePressed = (fireKeyState == GLFW_PRESS);
+
+            bool firePressed = false;
+            if (this->controller[i] != NULL) {
+                //if (payload.triggerRight >= 127)
+                //    firePressed = true;
+            }
+            else {
+                int fireKeyState = glfwGetKey(window_, inputBindings_[i].fire);
+                firePressed = (fireKeyState == GLFW_PRESS);
+            }
+
             if (firePressed && player.state.fireCooldown <= 0.0f)
             {
                 shootingSystem_.FireBullet(player.state);
