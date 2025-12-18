@@ -376,7 +376,7 @@ namespace plane::render
         if (!onScreen)
         {
             glm::vec2 clampedDir = dirFromCenter;
-            float maxAxis = std::max(std::abs(clampedDir.x), std::abs(clampedDir.y));
+            float maxAxis = (std::max)(std::abs(clampedDir.x), std::abs(clampedDir.y));
             if (maxAxis < 0.0001f)
             {
                 maxAxis = 1.0f;
