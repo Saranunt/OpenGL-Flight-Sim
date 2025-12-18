@@ -260,8 +260,6 @@ namespace plane::app
             std::cout << "Failed to load one or more plane parts for player 2 from plane2/ folder" << std::endl;
         }
 
-        islandModel_ = std::make_unique<Model>(FileSystem::getPath("resources/objects/island4/Untitled.dae"));
-
         islandManager_.GenerateIslands();
         groundPlane_.Initialize(FileSystem::getPath("resources/textures/wave3.jpg"));
         terrainPlane_.Initialize(FileSystem::getPath("resources/objects/island4/island_baseColor.jpeg"), 3000.0f, 250);  // 5x size, 2.5x grid resolution
