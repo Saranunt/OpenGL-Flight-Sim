@@ -135,14 +135,13 @@ namespace plane::app
             inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i], plane_.get(), sendIn);
             boosterSystem_.Update(player.state, timingState_.deltaTime);
 
-            std::cout << timingState_.deltaTime << std::endl;
-
             if (player.state.isBoosting && player.state.boostHeld) {
-                this->controller[i]->setRumblePower(255, 255).send();
+                if(this->controller[i] != NULL)
+                    this->controller[i]->setRumblePower(255, 255).send();
             }
             else {
-                this->controller[i]->setRumblePower(0, 0).send();
-                isRumbleSet[i] = false;
+                if (this->controller[i] != NULL)
+                    this->controller[i]->setRumblePower(0, 0).send();
             }
 
 
@@ -192,8 +191,11 @@ namespace plane::app
         shadowMap_.Shutdown();
         skybox_.Shutdown();
 
-        this->controller[0]->closeDualSense();
-        this->controller[1]->closeDualSense();
+
+        if(this->controller[0] != NULL)
+            this->controller[0]->closeDualSense();
+        if (this->controller[1] != NULL)
+            this->controller[1]->closeDualSense();
 
         glfwTerminate();
     }
