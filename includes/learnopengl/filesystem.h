@@ -29,10 +29,10 @@ private:
   //static std::string(*foo (std::string const &)) getPathBuilder()
   static Builder getPathBuilder()
   {
-    if (getRoot() != "")
-      return &FileSystem::getPathRelativeRoot;
-    else
-      return &FileSystem::getPathRelativeBinary;
+    // if (getRoot() != "")
+    //   return &FileSystem::getPathRelativeRoot;
+    // else
+    return &FileSystem::getPathRelativeBinary;
   }
 
   static std::string getPathRelativeRoot(const std::string& path)
@@ -42,7 +42,7 @@ private:
 
   static std::string getPathRelativeBinary(const std::string& path)
   {
-    return "../../../" + path;
+    return "../../" + path;
   }
 
 

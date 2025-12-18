@@ -27,7 +27,7 @@ namespace plane::input
         }
     }
 
-    void InputHandler::ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings, plane::app::Plane* plane, struct inputReportPayload* payload) const
+    void InputHandler::ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings, plane::app::Plane* plane, struct inputReportPayload* payload, std::size_t playerIndex) const
     {
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         {
@@ -142,52 +142,61 @@ namespace plane::input
         // Optional per-part transforms when a plane pointer is provided.
         if (plane)
         {
-            // Persistent angles for smooth motion (radians)
-            static float tailAngle = 0.0f;
-            static float flapRAngle = 0.0f;
-            static float flapLAngle = 0.0f;
-
-            // Targets (radians)
             float tailTarget = 0.0f;
-            if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS || payload != NULL) {
-                if (payload == NULL) {
+            float flapRTarget = 0.0f;
+            float flapLTarget = 0.0f;
+            if (payload == NULL){
+                // Targets (radians)
+                if (glfwGetKey(window, bindings.tailUp) == GLFW_PRESS)
                     tailTarget = glm::radians(kMaxTailAngleDeg);    // up to +30°
+                else if (glfwGetKey(window, bindings.tailDown) == GLFW_PRESS)
+                    tailTarget = glm::radians(-kMaxTailAngleDeg);   // down to -30°
+
+                if (glfwGetKey(window, bindings.flapLeftDown) == GLFW_PRESS)
+                    flapRTarget = glm::radians(-kMaxFlapAngleDeg);  // right flap down 30°
+
+                if (glfwGetKey(window, bindings.flapRightDown) == GLFW_PRESS)
+                    flapLTarget = glm::radians(-kMaxFlapAngleDeg);  // left flap down 30°
+            }
+            else if (payload != NULL && (playerIndex == 0 || playerIndex == 1)) {
+                // Only apply controller transforms if payload belongs to this player
+                // (payload is passed only for the correct player in Update loop)
+                // handle tail
+                if (payload->analogLeftY <= 0x75 || payload->analogLeftY >= 0x85) {
+                    float mappedTailAngle = ((payload->analogLeftY/255.0)*90.0)-45.0;
+                    tailTarget = glm::radians(kMaxTailAngleDeg);
                 }
-                else {
-                    if (payload->analogLeftY <= 0x75 || payload->analogLeftY >= 0x85) {
-                        float mappedTailAngle = ((payload->analogLeftY/255.0)*90.0)-45.0;
-                        tailTarget = glm::radians(kMaxTailAngleDeg);
-                    }
+                // handle flaps with right stick X: >0x7F left flap down, <0x7F right flap down
+                if (payload->analogRightX > 0x7F) {
+                    float t = (payload->analogRightX - 0x7F) / static_cast<float>(0xFF - 0x7F);
+                    t = glm::clamp(t, 0.0f, 1.0f);
+                    flapLTarget = glm::radians(-kMaxFlapAngleDeg * t);
+                }
+                else if (payload->analogRightX < 0x7F) {
+                    float t = (0x7F - payload->analogRightX) / static_cast<float>(0x7F);
+                    t = glm::clamp(t, 0.0f, 1.0f);
+                    flapRTarget = glm::radians(-kMaxFlapAngleDeg * t);
                 }
             }
-            else if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-                tailTarget = glm::radians(-kMaxTailAngleDeg);   // down to -30°
 
-            float flapRTarget = 0.0f;
-            if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-                flapRTarget = glm::radians(-kMaxFlapAngleDeg);  // right flap down 30°
-
-            float flapLTarget = 0.0f;
-            if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-                flapLTarget = glm::radians(-kMaxFlapAngleDeg);  // left flap down 30°
 
             // Approach targets smoothly
             const float tailStepMax = glm::radians(kTailMoveSpeedDeg) * timingState.deltaTime;
             const float flapStepMax = glm::radians(kFlapMoveSpeedDeg) * timingState.deltaTime;
 
-            float newTailAngle = MoveTowards(tailAngle, tailTarget, tailStepMax);
-            float newFlapRAngle = MoveTowards(flapRAngle, flapRTarget, flapStepMax);
-            float newFlapLAngle = MoveTowards(flapLAngle, flapLTarget, flapStepMax);
+            float newTailAngle = MoveTowards(planeState.tailAngle, tailTarget, tailStepMax);
+            float newFlapRAngle = MoveTowards(planeState.flapRAngle, flapRTarget, flapStepMax);
+            float newFlapLAngle = MoveTowards(planeState.flapLAngle, flapLTarget, flapStepMax);
 
             // Apply deltas around X axis
-            plane->RotatePart(plane::app::Plane::Part::Tail,  glm::vec3(1.0f, 0.0f, 0.0f), newTailAngle - tailAngle);
-            plane->RotatePart(plane::app::Plane::Part::FlapR, glm::vec3(1.0f, 0.0f, 0.0f), newFlapRAngle - flapRAngle);
-            plane->RotatePart(plane::app::Plane::Part::FlapL, glm::vec3(1.0f, 0.0f, 0.0f), newFlapLAngle - flapLAngle);
+            plane->RotatePart(plane::app::Plane::Part::Tail,  glm::vec3(1.0f, 0.0f, 0.0f), newTailAngle - planeState.tailAngle);
+            plane->RotatePart(plane::app::Plane::Part::FlapR, glm::vec3(1.0f, 0.0f, 0.0f), newFlapRAngle - planeState.flapRAngle);
+            plane->RotatePart(plane::app::Plane::Part::FlapL, glm::vec3(1.0f, 0.0f, 0.0f), newFlapLAngle - planeState.flapLAngle);
 
-            // Update stored angles
-            tailAngle = newTailAngle;
-            flapRAngle = newFlapRAngle;
-            flapLAngle = newFlapLAngle;
+            // Update stored angles in planeState
+            planeState.tailAngle = newTailAngle;
+            planeState.flapRAngle = newFlapRAngle;
+            planeState.flapLAngle = newFlapLAngle;
 
             // Always spin blade around Z
             const float bladeStep = glm::radians(360.0f) * timingState.deltaTime * 1.5f;

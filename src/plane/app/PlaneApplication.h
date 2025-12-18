@@ -72,8 +72,6 @@ namespace plane::app
         static void MouseCallback(GLFWwindow* window, double xpos, double ypos);
         static void ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
-        static PlaneApplication* s_instance_;
-
         struct PlayerContext
         {
             core::PlaneState state;
@@ -83,7 +81,7 @@ namespace plane::app
 
         GLFWwindow* window_ { nullptr };
         std::unique_ptr<Shader> shader_;
-        std::unique_ptr<Plane> plane_;
+        std::array<std::unique_ptr<Plane>, 2> planes_;
         std::unique_ptr<Model> islandModel_;
         std::unique_ptr<Shader> shadowShader_;
         std::unique_ptr<Shader> skyboxShader_;

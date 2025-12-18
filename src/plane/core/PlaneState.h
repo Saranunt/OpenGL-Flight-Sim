@@ -35,6 +35,11 @@ namespace plane::core
         // Input acceleration tracking
         float pitchInputTime { 0.0f };  // Time pitch control has been held
         float rollInputTime { 0.0f };   // Time roll control has been held
+        
+        // Control surface animation state (per player)
+        float tailAngle { 0.0f };   // Current tail rotation angle (radians)
+        float flapRAngle { 0.0f };  // Current right flap angle (radians)
+        float flapLAngle { 0.0f };  // Current left flap angle (radians)
 
         // Firing cooldown state
         float fireCooldown { 0.0f };
