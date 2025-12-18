@@ -31,6 +31,7 @@
 #include "render/PlaneRenderer.h"
 #include "render/ShadowMap.h"
 #include "render/StartMenuRenderer.h"
+#include "render/Skybox.h"
 #include "render/TerrainPlane.h"
 #include "world/IslandManager.h"
 #include "Plane.h"
@@ -85,6 +86,7 @@ namespace plane::app
         std::unique_ptr<Plane> plane_;
         std::unique_ptr<Model> islandModel_;
         std::unique_ptr<Shader> shadowShader_;
+        std::unique_ptr<Shader> skyboxShader_;
 
         render::GroundPlane groundPlane_;
         render::TerrainPlane terrainPlane_;
@@ -93,6 +95,7 @@ namespace plane::app
         render::HealthBarRenderer healthBarRenderer_;
         render::StartMenuRenderer startMenuRenderer_;
         render::ShadowMap shadowMap_;
+        render::Skybox skybox_;
         world::IslandManager islandManager_;
 
         std::array<PlayerContext, 2> players_;

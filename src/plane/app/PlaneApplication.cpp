@@ -124,6 +124,7 @@ namespace plane::app
         boostTrailRenderer_.Shutdown();
         startMenuRenderer_.Shutdown();
         shadowMap_.Shutdown();
+        skybox_.Shutdown();
         glfwTerminate();
     }
 
@@ -176,6 +177,7 @@ namespace plane::app
         InitializePlayers();
         shader_ = std::make_unique<Shader>("plane.vs", "plane.fs");
         shadowShader_ = std::make_unique<Shader>("shadow_depth.vs", "shadow_depth.fs");
+        skyboxShader_ = std::make_unique<Shader>("skybox.vs", "skybox.fs");
 
         plane_ = std::make_unique<Plane>();
         if (!plane_->LoadModels())
@@ -192,6 +194,15 @@ namespace plane::app
         {
             std::cout << "Failed to initialize shadow map resources." << std::endl;
         }
+        if (!skybox_.Initialize(FileSystem::getPath("resources/textures/skybox")))
+        {
+            std::cout << "Failed to initialize skybox resources." << std::endl;
+        }
+        if (skyboxShader_)
+        {
+            skyboxShader_->use();
+            skyboxShader_->setInt("skybox", 0);
+        }
 
         shootingSystem_.Initialize();
         skeletalAnimationSystem_.Initialize();
@@ -206,7 +217,7 @@ namespace plane::app
     void PlaneApplication::InitializePlayers()
     {
         players_[0].state.position = glm::vec3(100.0f, 26.0f, 0.0f);
-        players_[1].state.position = glm::vec3(-100.0f, 26.0f, 0.0f);
+        players_[1].state.position = glm::vec3(-100.0f, 96.0f, 0.0f);
 
         inputBindings_[0] = input::InputBindings{};
         inputBindings_[1] = input::InputBindings{
@@ -294,7 +305,7 @@ namespace plane::app
         players_[0].fireCooldown = 0.0f;
         
         // Reset player 2
-        players_[1].state.position = glm::vec3(-100.0f, 26.0f, 0.0f);
+        players_[1].state.position = glm::vec3(-100.0f, 96.0f, 0.0f);
         players_[1].state.pitch = 0.0f;
         players_[1].state.yaw = 0.0f;
         players_[1].state.roll = 0.0f;
@@ -381,6 +392,7 @@ namespace plane::app
             // Render enemy health bar above enemy plane
             size_t enemyIdx = (i == 0) ? 1 : 0;
             healthBarRenderer_.RenderEnemyHealthBar(players_[enemyIdx].state, projection, view, players_[i].cameraRig.camera.Position);
+            healthBarRenderer_.RenderEnemyTargetGuide(players_[enemyIdx].state, projection, view);
         }
 
         // Draw a simple vertical divider between the two viewports.
@@ -439,6 +451,11 @@ namespace plane::app
 
     void PlaneApplication::RenderColorPass(const glm::mat4& projection, const glm::mat4& view, const glm::mat4& lightSpaceMatrix, const core::CameraRig& cameraRig)
     {
+        if (skyboxShader_)
+        {
+            skybox_.Draw(projection, view, *skyboxShader_);
+        }
+
         shader_->use();
         shader_->setMat4("projection", projection);
         shader_->setMat4("view", view);

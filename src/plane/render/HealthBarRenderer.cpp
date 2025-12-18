@@ -1,8 +1,11 @@
 #include "HealthBarRenderer.h"
 
 #include <glad/glad.h>
+#include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <algorithm>
+#include <cmath>
 
 #include "core/PlaneState.h"
 #include "core/CameraRig.h"
@@ -33,13 +36,33 @@ namespace plane::render
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindVertexArray(0);
 
+        // Slender isosceles triangle for the enemy guide arrow
+        float guideVertices[] = {
+            0.0f,  0.8f,   // Tip
+           -0.35f, -0.5f,  // Bottom left
+            0.35f, -0.5f   // Bottom right
+        };
+
+        glGenVertexArrays(1, &guideVao_);
+        glGenBuffers(1, &guideVbo_);
+        glBindVertexArray(guideVao_);
+        glBindBuffer(GL_ARRAY_BUFFER, guideVbo_);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(guideVertices), guideVertices, GL_STATIC_DRAW);
+
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+
         CreateShaders();
     }
 
     void HealthBarRenderer::CreateShaders()
     {
-        uiShaderProgram_ = std::make_unique<Shader>("healthbar_ui.vs", "healthbar_ui.fs");
+        uiShaderProgram_ = std::make_unique<Shader>("ui.vs", "ui.fs");
         billboardShaderProgram_ = std::make_unique<Shader>("billboard.vs", "billboard.fs");
+        enemyGuideShaderProgram_ = std::make_unique<Shader>("enemy_target_guide.vs", "enemy_target_guide.fs");
     }
 
     void HealthBarRenderer::Shutdown()
@@ -54,8 +77,19 @@ namespace plane::render
             glDeleteVertexArrays(1, &barVao_);
             barVao_ = 0;
         }
+        if (guideVbo_ != 0)
+        {
+            glDeleteBuffers(1, &guideVbo_);
+            guideVbo_ = 0;
+        }
+        if (guideVao_ != 0)
+        {
+            glDeleteVertexArrays(1, &guideVao_);
+            guideVao_ = 0;
+        }
         uiShaderProgram_.reset();
         billboardShaderProgram_.reset();
+        enemyGuideShaderProgram_.reset();
     }
 
     void HealthBarRenderer::RenderPlayerHealthBar(const core::PlaneState& playerState,
@@ -299,6 +333,82 @@ namespace plane::render
         billboardShaderProgram_->setVec3("color", glm::vec3(1.0f, 0.0f, 0.0f));
         glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
+        glEnable(GL_DEPTH_TEST);
+        glBindVertexArray(0);
+    }
+
+    void HealthBarRenderer::RenderEnemyTargetGuide(const core::PlaneState& enemyState,
+                                                   const glm::mat4& projection,
+                                                   const glm::mat4& view) const
+    {
+        if (!enemyState.isAlive || guideVao_ == 0 || enemyGuideShaderProgram_ == 0)
+        {
+            return;
+        }
+
+        glm::vec3 guideWorldPos = enemyState.position + glm::vec3(0.0f, TARGET_GUIDE_OFFSET_Y, 0.0f);
+        glm::vec4 viewSpacePos = view * glm::vec4(guideWorldPos, 1.0f);
+        glm::vec4 clipPos = projection * viewSpacePos;
+        if (clipPos.w == 0.0f)
+        {
+            return;
+        }
+
+        bool behindCamera = viewSpacePos.z > 0.0f; // Positive z in view space means behind the camera
+
+        glm::vec3 ndc = glm::vec3(clipPos) / clipPos.w;
+        glm::vec2 dirFromCenter = behindCamera
+            ? glm::vec2(viewSpacePos) // Use view-space to keep vertical direction correct when behind
+            : glm::vec2(ndc);
+        if (glm::length(dirFromCenter) < 0.0001f)
+        {
+            dirFromCenter = glm::vec2(0.0f, 1.0f);
+        }
+        dirFromCenter = glm::normalize(dirFromCenter);
+
+        bool onScreen =
+            !behindCamera &&
+            ndc.x >= -1.0f && ndc.x <= 1.0f &&
+            ndc.y >= -1.0f && ndc.y <= 1.0f &&
+            ndc.z >= -1.0f && ndc.z <= 1.0f;
+
+        glm::vec2 indicatorNdc = glm::vec2(ndc);
+        if (!onScreen)
+        {
+            glm::vec2 clampedDir = dirFromCenter;
+            float maxAxis = (std::max)(std::abs(clampedDir.x), std::abs(clampedDir.y));
+            if (maxAxis < 0.0001f)
+            {
+                maxAxis = 1.0f;
+            }
+            clampedDir /= maxAxis;
+            indicatorNdc = clampedDir * TARGET_GUIDE_EDGE_PADDING;
+        }
+
+        float angle = std::atan2(dirFromCenter.y, dirFromCenter.x) - glm::half_pi<float>();
+        if (behindCamera)
+        {
+            angle += glm::pi<float>(); // Flip to point behind when enemy is behind the player
+        }
+        float size = onScreen ? TARGET_GUIDE_SIZE : TARGET_GUIDE_SIZE * 1.35f;
+
+        glm::mat4 transform = glm::mat4(1.0f);
+        transform = glm::translate(transform, glm::vec3(indicatorNdc, 0.0f));
+        transform = glm::rotate(transform, angle, glm::vec3(0.0f, 0.0f, 1.0f));
+        transform = glm::scale(transform, glm::vec3(size, size, 1.0f));
+
+        bool enemyInFront = viewSpacePos.z < 0.0f;
+
+        enemyGuideShaderProgram_->use();
+        enemyGuideShaderProgram_->setMat4("transform", transform);
+        glm::vec3 frontColor = onScreen ? glm::vec3(1.0f, 0.3f, 0.0f) : glm::vec3(1.0f, 1.0f, 0.0f);
+        glm::vec3 behindColor = glm::vec3(0.3f, 0.6f, 1.0f);
+        glm::vec3 color = enemyInFront ? frontColor : behindColor;
+        enemyGuideShaderProgram_->setVec3("color", color);
+
+        glBindVertexArray(guideVao_);
+        glDisable(GL_DEPTH_TEST);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
         glEnable(GL_DEPTH_TEST);
         glBindVertexArray(0);
     }
