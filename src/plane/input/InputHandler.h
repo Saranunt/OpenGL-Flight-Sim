@@ -9,6 +9,8 @@
 
 namespace plane::app { class Plane; }
 
+namespace plane::app { class Plane; }
+
 namespace plane::input
 {
     struct InputBindings
