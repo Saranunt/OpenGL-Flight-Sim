@@ -131,7 +131,7 @@ namespace plane::app
                 sendIn = NULL;
             }
 
-            inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i], planes_[i].get(), sendIn);
+            inputHandler_.ProcessInput(window_, player.state, timingState_, inputBindings_[i], planes_[i].get(), sendIn, i);
             boosterSystem_.Update(player.state, timingState_.deltaTime);
 
             if (player.state.isBoosting && player.state.boostHeld) {

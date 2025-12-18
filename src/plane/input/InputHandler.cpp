@@ -27,7 +27,7 @@ namespace plane::input
         }
     }
 
-    void InputHandler::ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings, plane::app::Plane* plane, struct inputReportPayload* payload) const
+    void InputHandler::ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings, plane::app::Plane* plane, struct inputReportPayload* payload, std::size_t playerIndex) const
     {
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         {
@@ -158,7 +158,9 @@ namespace plane::input
                 if (glfwGetKey(window, bindings.flapRightDown) == GLFW_PRESS)
                     flapLTarget = glm::radians(-kMaxFlapAngleDeg);  // left flap down 30°
             }
-            else if (payload != NULL){
+            else if (payload != NULL && (playerIndex == 0 || playerIndex == 1)) {
+                // Only apply controller transforms if payload belongs to this player
+                // (payload is passed only for the correct player in Update loop)
                 // handle tail
                 if (payload->analogLeftY <= 0x75 || payload->analogLeftY >= 0x85) {
                     float mappedTailAngle = ((payload->analogLeftY/255.0)*90.0)-45.0;

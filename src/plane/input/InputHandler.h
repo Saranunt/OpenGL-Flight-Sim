@@ -34,7 +34,7 @@ namespace plane::input
     class InputHandler
     {
     public:
-        void ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings, plane::app::Plane* plane = nullptr, struct inputReportPayload* payload = nullptr) const;
+        void ProcessInput(GLFWwindow* window, core::PlaneState& planeState, const core::TimingState& timingState, const InputBindings& bindings, plane::app::Plane* plane = nullptr, struct inputReportPayload* payload = nullptr, std::size_t playerIndex = 0) const;
         void OnMouseMove(double xposIn, double yposIn, core::CameraRig& cameraRig) const;
         void OnScroll(double yoffset, core::CameraRig& cameraRig) const;
     };
