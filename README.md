@@ -2,15 +2,28 @@
 
 This repository is a small OpenGL game project based on the LearnOpenGL examples (https://learnopengl.com). The code has been simplified and reorganized into a minimal game (`plane`) with reusable code grouped into modules for easier expansion and feature work.
 
-**Current Progress:**
+**Gameplay Demo video :**
+<p align="center"> <a href="https://youtu.be/fh7jHD8erLU" target="_blank"> <img src="https://img.youtube.com/vi/fh7jHD8erLU/maxresdefault.jpg" alt="Plane Demo Video" width="70%"> </a> </p>
 
-https://github.com/user-attachments/assets/81037af2-66e3-45c2-aec4-d366b0dd8fa7
-
-**What's Next?:**
-- Frame Buffer for dual screen multiplayer
-- better plane animation
-- better map/ sky box
-- joy stick control
+**Current Feature**
+- Modular game logic (`PlaneGame`)
+- Asset management for textures and 3D objects
+- CMake-based cross-platform build setup
+- LearnOpenGL-based rendering utilities
+- Couch co-op (Split screen) multiplayer
+- In-game HUD
+  - Enemy Navigation System
+  - Overhead enemy health bar
+  - User health bar
+  - User booster energy bar
+  - Red-dot
+- Plane model animation
+  - Flap animaiton
+  - Propeller animation
+- Sony Dualsense Support (**Wired Connection only**)
+  - Basic control
+  - Rumble effect
+  - Adaptive trigger effect      
 
 **Project Goals:**
 
@@ -30,6 +43,7 @@ cmake --build .
 **Run:**
 
 - After a successful build the executable is placed under `bin/plane/` (on Windows CMake places binaries in `bin/plane/Debug` or `bin/plane/Release` depending on the configuration). Run the produced `plane` executable.
+- For the [itch.io](https://saranunt.itch.io/bottom) version if you use windows you can start the game with `.\launcher.bat`
 
 **Notes:**
 
@@ -40,25 +54,36 @@ cmake --build .
 
 - **CMake**: >= 3.0
 - **GLFW3**, **GLM**, **ASSIMP**, **OpenGL** development headers/libraries
+- **hidApi** For interfacing with Sony Dualsense controller
 - **C++17** compiler (MSVC, GCC, Clang)
 
 **Repository Structure (top-level overview)**
 
-- `CMakeLists.txt`: top-level build script
-- `bin/` : build output (created by CMake)
-- `cmake/` : CMake helper modules
-- `dlls/` : optional windows DLLs for runtime
-- `includes/` : third-party headers delivered with the repo
-- `lib/` : optional prebuilt libraries
-- `resources/`
-  - `objects/` : 3D models used by the game
-  - `textures/` : textures used by the game
-- `src/`
-  - `glad.c`, `stb_image.cpp` : helper sources built as libraries
-  - `plane/` : the active game target
-    - `plane.cpp` : program entry (initializes GLFW/GLAD and runs game loop)
-    - `PlaneGame.h`, `PlaneGame.cpp` : game module (plane state, islands, ground, rendering)
-    - `plane.vs`, `plane.fs`, `ground.vs`, `ground.fs` : shader files used by the game
+```
+OpenGL-Flight-Sim/
+├─ CMakeLists.txt
+├─ build_windows.sh
+├─ cmake/
+│  └─ modules/
+├─ configuration/
+├─ dlls/
+├─ includes/
+├─ lib/
+├─ resources/
+│  ├─ objects/
+│  └─ textures/
+└─ src/
+   ├─ glad.c
+   ├─ stb_image.cpp
+   └─ plane/
+      ├─ plane.cpp
+      ├─ PlaneGame.h
+      ├─ PlaneGame.cpp
+      ├─ plane.vs
+      ├─ plane.fs
+      ├─ ground.vs
+      └─ ground.fs
+```
 
 **Quick troubleshooting**
 
@@ -68,6 +93,22 @@ cmake --build .
 **Credits**
 
 - This project is based on the LearnOpenGL example code and helper utilities (https://learnopengl.com). Most helper headers and small utilities (shader, camera, model loader helpers) are included under `includes/` and `src/`.
+
+- island model: "Green Island" (https://skfb.ly/6EMqw) by bilgehan.korkmaz is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+
+- plane model "Stylized Plane PFALZ D.IIIa" (https://skfb.ly/otFYJ) by ssor01 is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+
+- Sky box from learn-open-gl
+
+**Authors**
+
+- (1039) Pongpon Butseemart
+- (1055) Sorrawit Udomvittayakrai
+- (1092) Saranunt Park
+
+**For Windows User**
+
+For windows user, you can download the game from [Itch.io:BottomGunMaverick - GOTY edition](https://saranunt.itch.io/bottom)
 
 If you'd like, I can:
 
