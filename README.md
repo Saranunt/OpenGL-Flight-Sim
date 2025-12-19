@@ -99,6 +99,7 @@ OpenGL-Flight-Sim/
 - plane model "Stylized Plane PFALZ D.IIIa" (https://skfb.ly/otFYJ) by ssor01 is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
 
 - Sky box from learn-open-gl
+
 **Authors**
 
 - (1039) Pongpon Butseemart
