@@ -2,11 +2,6 @@
 
 This repository is a small OpenGL game project based on the LearnOpenGL examples (https://learnopengl.com). The code has been simplified and reorganized into a minimal game (`plane`) with reusable code grouped into modules for easier expansion and feature work.
 
-**Previous reported progress:**
-
-https://github.com/user-attachments/assets/81037af2-66e3-45c2-aec4-d366b0dd8fa7
-
-
 **Gameplay Demo video :**
 <p align="center"> <a href="https://youtu.be/fh7jHD8erLU" target="_blank"> <img src="https://img.youtube.com/vi/fh7jHD8erLU/maxresdefault.jpg" alt="Plane Demo Video" width="70%"> </a> </p>
 
