@@ -94,6 +94,11 @@ OpenGL-Flight-Sim/
 
 - This project is based on the LearnOpenGL example code and helper utilities (https://learnopengl.com). Most helper headers and small utilities (shader, camera, model loader helpers) are included under `includes/` and `src/`.
 
+- island model: "Green Island" (https://skfb.ly/6EMqw) by bilgehan.korkmaz is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+
+- plane model "Stylized Plane PFALZ D.IIIa" (https://skfb.ly/otFYJ) by ssor01 is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
+
+- Sky box from learn-open-gl
 **Authors**
 
 - (1039) Pongpon Butseemart
